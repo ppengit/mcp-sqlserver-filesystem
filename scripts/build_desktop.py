@@ -1,298 +1,331 @@
 #!/usr/bin/env python3
 """
-Build script for MCP SQL Server Filesystem Desktop Application
+桌面应用程序构建脚本
 
-This script automates the build process for the desktop application,
-including dependency installation, building, testing, and packaging.
+参考 mcp-feedback-enhanced 项目的构建方式，
+负责构建 Tauri 桌面应用程序，
+确保在 PyPI 发布时包含预编译的二进制文件。
+
+使用方法：
+    python scripts/build_desktop.py [--release] [--clean]
 """
 
 import argparse
 import os
+import shutil
 import subprocess
 import sys
-import shutil
 from pathlib import Path
 
 
-class DesktopBuilder:
-    """Desktop application builder."""
-    
-    def __init__(self):
-        self.project_root = Path(__file__).parent
-        self.tauri_dir = self.project_root / "src-tauri"
-        self.dist_dir = self.project_root / "dist" / "desktop"
-    
-    def check_rust(self) -> bool:
-        """Check if Rust is installed."""
-        try:
-            result = subprocess.run(["rustc", "--version"], 
-                                  capture_output=True, text=True)
-            if result.returncode == 0:
-                print(f"✅ Rust found: {result.stdout.strip()}")
-                return True
-        except FileNotFoundError:
-            pass
-        
-        print("❌ Rust not found. Please install from https://rustup.rs/")
-        return False
-    
-    def check_tauri_cli(self) -> bool:
-        """Check if Tauri CLI is installed."""
-        try:
-            result = subprocess.run(["cargo", "tauri", "--version"], 
-                                  capture_output=True, text=True)
-            if result.returncode == 0:
-                print(f"✅ Tauri CLI found: {result.stdout.strip()}")
-                return True
-        except FileNotFoundError:
-            pass
-        
-        print("❌ Tauri CLI not found")
-        return False
-    
-    def install_deps(self) -> bool:
-        """Install development dependencies."""
-        print("📦 Installing development dependencies...")
-        
-        if not self.check_rust():
-            return False
-        
-        if not self.check_tauri_cli():
-            print("📦 Installing Tauri CLI...")
-            try:
-                result = subprocess.run([
-                    "cargo", "install", "tauri-cli", "--version", "^1.0"
-                ], check=True)
-                print("✅ Tauri CLI installed successfully")
-            except subprocess.CalledProcessError as e:
-                print(f"❌ Failed to install Tauri CLI: {e}")
-                return False
-        
-        return True
-    
-    def build_desktop(self, release: bool = False) -> bool:
-        """Build the desktop application."""
-        mode = "release" if release else "debug"
-        print(f"🔨 Building desktop application ({mode} mode)...")
-        
-        if not self.tauri_dir.exists():
-            print(f"❌ Tauri directory not found: {self.tauri_dir}")
-            return False
-        
-        try:
-            cmd = ["cargo", "tauri", "build"]
-            if not release:
-                cmd.append("--debug")
-            
-            result = subprocess.run(cmd, cwd=self.tauri_dir, check=True)
-            print(f"✅ Desktop application built successfully ({mode})")
-            return True
-            
-        except subprocess.CalledProcessError as e:
-            print(f"❌ Failed to build desktop application: {e}")
-            return False
-    
-    def test_desktop(self) -> bool:
-        """Test the desktop application."""
-        print("🧪 Testing desktop application...")
-        
-        try:
-            # Run Python tests if they exist
-            test_file = self.project_root / "tests" / "test_desktop.py"
-            if test_file.exists():
-                result = subprocess.run([
-                    sys.executable, "-m", "pytest", 
-                    str(test_file), "-v"
-                ], check=True)
+def run_command(
+    cmd: list[str], cwd: str = None, check: bool = True, show_info: bool = True
+) -> subprocess.CompletedProcess:
+    """执行命令并返回结果"""
+    if show_info:
+        print(f"🔧 执行命令: {' '.join(cmd)}")
+        if cwd:
+            print(f"📁 工作目录: {cwd}")
+
+    result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, check=False)
+
+    # 处理标准输出
+    if result.stdout and show_info:
+        print("📤 输出:")
+        print(result.stdout.strip())
+
+    # 智能处理标准错误 - 区分信息和真正的错误
+    if result.stderr:
+        stderr_lines = result.stderr.strip().split("\n")
+        info_lines = []
+        error_lines = []
+
+        for line in stderr_lines:
+            stripped_line = line.strip()
+            if not stripped_line:
+                continue
+            # 识别信息性消息和正常编译输出
+            if (
+                stripped_line.startswith("info:")
+                or "is up to date" in stripped_line
+                or "downloading component" in stripped_line
+                or "installing component" in stripped_line
+                or stripped_line.startswith("Compiling")
+                or stripped_line.startswith("Finished")
+                or stripped_line.startswith("Building")
+                or "target(s) in" in stripped_line
+            ):
+                info_lines.append(stripped_line)
             else:
-                # Run functional test
-                result = subprocess.run([
-                    sys.executable, "-m", "mcp_sqlserver_filesystem", 
-                    "test", "--desktop"
-                ], check=True)
-            
-            print("✅ Desktop application tests passed")
-            return True
-            
-        except subprocess.CalledProcessError as e:
-            print(f"❌ Desktop application tests failed: {e}")
-            return False
-    
-    def dev_desktop(self) -> bool:
-        """Run desktop application in development mode."""
-        print("🚀 Starting desktop application in development mode...")
-        
-        if not self.tauri_dir.exists():
-            print(f"❌ Tauri directory not found: {self.tauri_dir}")
-            return False
-        
+                error_lines.append(stripped_line)
+
+        # 显示信息性消息
+        if info_lines and show_info:
+            print("ℹ️  信息:")
+            for line in info_lines:
+                print(f"   {line}")
+
+        # 显示真正的错误
+        if error_lines:
+            print("❌ 错误:")
+            for line in error_lines:
+                print(f"   {line}")
+
+    if check and result.returncode != 0:
+        raise subprocess.CalledProcessError(result.returncode, cmd)
+
+    return result
+
+
+def check_rust_environment():
+    """检查 Rust 开发环境"""
+    print("🔍 检查 Rust 开发环境...")
+
+    try:
+        result = run_command(["rustc", "--version"])
+        print(f"✅ Rust 编译器: {result.stdout.strip()}")
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        print("❌ 未找到 Rust 编译器")
+        print("💡 请安装 Rust: https://rustup.rs/")
+        return False
+
+    try:
+        result = run_command(["cargo", "--version"])
+        print(f"✅ Cargo: {result.stdout.strip()}")
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        print("❌ 未找到 Cargo")
+        return False
+
+    try:
+        result = run_command(["cargo", "install", "--list"])
+        if "tauri-cli" in result.stdout:
+            print("✅ Tauri CLI 已安装")
+        else:
+            print("⚠️  Tauri CLI 未安装，尝试安装...")
+            run_command(["cargo", "install", "tauri-cli"])
+            print("✅ Tauri CLI 安装完成")
+    except subprocess.CalledProcessError:
+        print("❌ 无法安装 Tauri CLI")
+        return False
+
+    return True
+
+
+def install_rust_targets():
+    """安装跨平台编译所需的 Rust targets"""
+    print("🎯 安装跨平台编译 targets...")
+
+    # 定义需要的 targets
+    targets = [
+        ("x86_64-pc-windows-msvc", "Windows x64"),
+        ("x86_64-apple-darwin", "macOS Intel"),
+        ("aarch64-apple-darwin", "macOS Apple Silicon"),
+        ("x86_64-unknown-linux-gnu", "Linux x64"),
+    ]
+
+    installed_count = 0
+    updated_count = 0
+
+    for target, description in targets:
+        print(f"📦 检查 target: {target} ({description})")
         try:
-            subprocess.run(["cargo", "tauri", "dev"], cwd=self.tauri_dir, check=True)
-            return True
-            
-        except subprocess.CalledProcessError as e:
-            print(f"❌ Failed to start development mode: {e}")
-            return False
-        except KeyboardInterrupt:
-            print("\n🛑 Development mode stopped")
-            return True
-    
-    def clean_desktop(self) -> bool:
-        """Clean desktop build artifacts."""
-        print("🧹 Cleaning desktop build artifacts...")
-        
-        try:
-            if self.tauri_dir.exists():
-                # Clean Cargo artifacts
-                subprocess.run(["cargo", "clean"], cwd=self.tauri_dir)
-                
-                # Remove target directory
-                target_dir = self.tauri_dir / "target"
-                if target_dir.exists():
-                    shutil.rmtree(target_dir)
-            
-            print("✅ Desktop build artifacts cleaned")
-            return True
-            
+            result = run_command(
+                ["rustup", "target", "add", target], check=False, show_info=False
+            )
+
+            if result.returncode == 0:
+                # 检查是否是新安装还是已存在
+                if "is up to date" in result.stderr:
+                    print(f"✅ {description} - 已是最新版本")
+                    updated_count += 1
+                elif "installing component" in result.stderr:
+                    print(f"🆕 {description} - 新安装完成")
+                    installed_count += 1
+                else:
+                    print(f"✅ {description} - 安装成功")
+                    installed_count += 1
+            else:
+                print(f"⚠️  {description} - 安装失败")
+                if result.stderr:
+                    print(f"   错误: {result.stderr.strip()}")
         except Exception as e:
-            print(f"❌ Failed to clean artifacts: {e}")
-            return False
+            print(f"⚠️  安装 {description} 时发生错误: {e}")
+
+    print(
+        f"✅ Rust targets 检查完成 (新安装: {installed_count}, 已存在: {updated_count})"
+    )
+
+
+def clean_build_artifacts(project_root: Path):
+    """清理构建产物"""
+    print("🧹 清理构建产物...")
+
+    # 清理 Rust 构建产物
+    rust_target = project_root / "src-tauri" / "target"
+    if rust_target.exists():
+        print(f"清理 Rust target 目录: {rust_target}")
+        shutil.rmtree(rust_target)
+
+    # 清理 Python 构建产物
+    python_build_dirs = [
+        project_root / "build",
+        project_root / "dist",
+    ]
+
+    for build_dir in python_build_dirs:
+        if build_dir.exists():
+            print(f"清理 Python 构建目录: {build_dir}")
+            if build_dir.is_dir():
+                shutil.rmtree(build_dir)
+            else:
+                build_dir.unlink()
+
+
+def build_tauri_app_current_platform(project_root: Path, release: bool = True):
+    """构建当前平台的 Tauri 桌面应用程序"""
+    print("🖥️ 构建当前平台的 Tauri 桌面应用程序...")
+
+    src_tauri = project_root / "src-tauri"
+    if not src_tauri.exists():
+        raise FileNotFoundError(f"src-tauri 目录不存在: {src_tauri}")
+
+    # 构建命令
+    build_cmd = ["cargo", "tauri", "build"]
+    if not release:
+        build_cmd.append("--debug")
+
+    try:
+        run_command(build_cmd, cwd=str(src_tauri))
+        print("✅ 当前平台构建成功")
+        return True
+    except subprocess.CalledProcessError as e:
+        print("❌ 构建失败")
+        return False
+
+
+def copy_current_platform_artifacts(project_root: Path, release: bool = True):
+    """复制当前平台构建产物到适当位置"""
+    print("📦 复制当前平台构建产物...")
+
+    src_tauri = project_root / "src-tauri"
+    build_type = "release" if release else "debug"
+
+    # 创建目标目录
+    desktop_dir = project_root / "src" / "mcp_sqlserver_filesystem" / "desktop_binaries"
+    desktop_dir.mkdir(parents=True, exist_ok=True)
+
+    # 确定平台和文件扩展名
+    import platform
+    current_platform = platform.system().lower()
     
-    def package(self) -> bool:
-        """Package the desktop application for distribution."""
-        print("📦 Creating distribution package...")
-        
-        # Build release version
-        if not self.build_desktop(release=True):
-            return False
-        
-        # Create dist directory
-        self.dist_dir.mkdir(parents=True, exist_ok=True)
-        
-        # Copy platform-specific packages
-        target_dir = self.tauri_dir / "target" / "release"
-        bundle_dir = target_dir / "bundle"
-        
-        copied_files = []
-        
-        # Windows MSI installer
-        msi_pattern = f"mcp-sqlserver-filesystem_*_x64_en-US.msi"
-        msi_dir = bundle_dir / "msi"
-        if msi_dir.exists():
-            for msi_file in msi_dir.glob(msi_pattern):
-                dest = self.dist_dir / msi_file.name
-                shutil.copy2(msi_file, dest)
-                copied_files.append(dest.name)
-        
-        # Linux DEB package
-        deb_pattern = f"mcp-sqlserver-filesystem_*_amd64.deb"
-        deb_dir = bundle_dir / "deb"
-        if deb_dir.exists():
-            for deb_file in deb_dir.glob(deb_pattern):
-                dest = self.dist_dir / deb_file.name
-                shutil.copy2(deb_file, dest)
-                copied_files.append(dest.name)
-        
-        # macOS DMG
-        dmg_pattern = f"mcp-sqlserver-filesystem_*_x64.dmg"
-        dmg_dir = bundle_dir / "dmg"
-        if dmg_dir.exists():
-            for dmg_file in dmg_dir.glob(dmg_pattern):
-                dest = self.dist_dir / dmg_file.name
-                shutil.copy2(dmg_file, dest)
-                copied_files.append(dest.name)
-        
-        # Raw executable
-        executable_name = self._get_executable_name()
-        executable_path = target_dir / executable_name
-        if executable_path.exists():
-            dest = self.dist_dir / executable_name
-            shutil.copy2(executable_path, dest)
-            copied_files.append(executable_name)
-        
-        if copied_files:
-            print("✅ Distribution package created in dist/desktop/:")
-            for file in copied_files:
-                print(f"   📄 {file}")
-            return True
+    if current_platform == "windows":
+        binary_name = "mcp-sqlserver-filesystem.exe"
+        target_name = "mcp-sqlserver-filesystem.exe.windows-x64"
+    elif current_platform == "darwin":
+        binary_name = "mcp-sqlserver-filesystem"
+        arch = platform.machine().lower()
+        if arch in ['arm64', 'aarch64']:
+            target_name = "mcp-sqlserver-filesystem.macos-arm64"
         else:
-            print("⚠️  No distribution files found to package")
-            return False
+            target_name = "mcp-sqlserver-filesystem.macos-x64"
+    else:  # linux
+        binary_name = "mcp-sqlserver-filesystem"
+        target_name = "mcp-sqlserver-filesystem.linux-x64"
+
+    # 查找源文件
+    target_dir = src_tauri / "target" / build_type
+    src_file = target_dir / binary_name
+
+    if not src_file.exists():
+        print(f"❌ 未找到构建产物: {src_file}")
+        return False
+
+    # 复制文件
+    dest_file = desktop_dir / target_name
+    shutil.copy2(src_file, dest_file)
+    print(f"✅ 已复制: {src_file} -> {dest_file}")
+
+    # 更新 manifest
+    manifest_file = desktop_dir / "manifest.json"
+    import json
+    import time
     
-    def _get_executable_name(self) -> str:
-        """Get the executable name for the current platform."""
-        if sys.platform == "win32":
-            return "mcp-sqlserver-filesystem.exe"
-        elif sys.platform == "darwin":
-            return "mcp-sqlserver-filesystem.app"
-        else:
-            return "mcp-sqlserver-filesystem"
+    # 读取版本号
+    init_file = project_root / "src" / "mcp_sqlserver_filesystem" / "__init__.py"
+    version = "unknown"
+    if init_file.exists():
+        import re
+        content = init_file.read_text(encoding='utf-8')
+        match = re.search(r'__version__ = "([^"]*)"', content)
+        if match:
+            version = match.group(1)
+
+    manifest = {
+        "platform": current_platform,
+        "architecture": platform.machine().lower(),
+        "files": [target_name],
+        "build_time": time.strftime('%Y-%m-%dT%H:%M:%S', time.gmtime()),
+        "version": version,
+        "note": f"Built on {current_platform} for local development"
+    }
+
+    with manifest_file.open('w', encoding='utf-8') as f:
+        json.dump(manifest, f, indent=2, ensure_ascii=False)
+    
+    print(f"✅ 已更新 manifest: {manifest_file}")
+    return True
 
 
 def main():
-    """Main entry point."""
-    parser = argparse.ArgumentParser(
-        description="Build script for MCP SQL Server Filesystem Desktop Application"
-    )
-    
-    subparsers = parser.add_subparsers(dest="command", help="Available commands")
-    
-    # Install dependencies
-    subparsers.add_parser("install-deps", 
-                         help="Install development dependencies (Rust, Tauri CLI)")
-    
-    # Build commands
-    build_parser = subparsers.add_parser("build-desktop", 
-                                        help="Build desktop application")
-    build_parser.add_argument("--release", action="store_true",
-                             help="Build in release mode")
-    
-    subparsers.add_parser("build-desktop-release",
-                         help="Build desktop application (release mode)")
-    
-    # Test commands
-    subparsers.add_parser("test-desktop", 
-                         help="Test desktop application")
-    
-    # Development commands
-    subparsers.add_parser("dev-desktop",
-                         help="Run desktop application in development mode")
-    
-    # Utility commands
-    subparsers.add_parser("clean-desktop",
-                         help="Clean desktop build artifacts")
-    
-    subparsers.add_parser("package",
-                         help="Build and package for distribution")
-    
+    """主入口点"""
+    parser = argparse.ArgumentParser(description="桌面应用程序构建脚本")
+    parser.add_argument("--release", action="store_true", help="构建 release 版本")
+    parser.add_argument("--clean", action="store_true", help="清理构建产物")
+
     args = parser.parse_args()
-    
-    if not args.command:
-        parser.print_help()
-        return 1
-    
-    builder = DesktopBuilder()
-    
-    if args.command == "install-deps":
-        success = builder.install_deps()
-    elif args.command == "build-desktop":
-        success = builder.build_desktop(release=args.release)
-    elif args.command == "build-desktop-release":
-        success = builder.build_desktop(release=True)
-    elif args.command == "test-desktop":
-        success = builder.test_desktop()
-    elif args.command == "dev-desktop":
-        success = builder.dev_desktop()
-    elif args.command == "clean-desktop":
-        success = builder.clean_desktop()
-    elif args.command == "package":
-        success = builder.package()
-    else:
-        print(f"❌ Unknown command: {args.command}")
-        return 1
-    
-    return 0 if success else 1
+
+    # 获取项目根目录
+    project_root = Path(__file__).parent.parent
+    print(f"🏠 项目根目录: {project_root}")
+
+    try:
+        if args.clean:
+            clean_build_artifacts(project_root)
+            print("✅ 清理完成")
+            return
+
+        # 检查 Rust 环境
+        if not check_rust_environment():
+            print("❌ Rust 环境检查失败")
+            sys.exit(1)
+
+        # 安装必要的 targets（可选）
+        install_rust_targets()
+
+        # 构建当前平台的桌面应用
+        success = build_tauri_app_current_platform(project_root, args.release)
+        
+        if success:
+            # 复制构建产物
+            copy_success = copy_current_platform_artifacts(project_root, args.release)
+            if copy_success:
+                print("🎉 桌面应用构建完成！")
+                print("")
+                print("💡 注意：")
+                print("   - 目前只构建了当前平台的二进制文件")
+                print("   - 完整的多平台支持将在后续版本中实现")
+                print("   - 构建的二进制文件位于: src/mcp_sqlserver_filesystem/desktop_binaries/")
+            else:
+                print("❌ 复制构建产物失败")
+                sys.exit(1)
+        else:
+            print("❌ 构建失败")
+            sys.exit(1)
+
+    except Exception as e:
+        print(f"❌ 构建过程中发生错误: {e}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()
