@@ -1,61 +1,63 @@
-﻿# MCP SQL Server 文件系统
+﻿# MCP SQL Server Filesystem
 
-🚀 **增强的 MCP 服务器**，支持 SQL Server 数据库和文件系统访问，具有双界面支持。
+🚀 **Enhanced MCP server** for SQL Server database and filesystem access with dual interface support.
 
-## ✨ 核心特性
+*Read this in other languages: [中文](README_zh.md)*
 
-- **完整 SQL Server 支持** - 执行所有 SQL 命令，支持增强连接参数
-- **完全文件系统访问** - 读写文件，带确认对话框
-- **Web UI 界面** - 实时查询结果显示
-- **桌面应用程序** - 跨平台原生桌面应用 (v0.1.0 新功能)
-- **智能环境检测** - 自动适配 SSH Remote、WSL、本地环境
-- **增强连接参数** - 内置支持 `TrustServerCertificate=true`、`Encrypt=false`、`MultipleActiveResultSets=true`
+## ✨ Features
 
-## 🚀 快速开始
+- **Complete SQL Server Support** - Execute all SQL commands with enhanced connection parameters
+- **Full Filesystem Access** - Read/write files with confirmation dialogs  
+- **Web UI Interface** - Real-time query results display
+- **Desktop Application** - Cross-platform native desktop app (v0.1.1 new feature)
+- **Smart Environment Detection** - Auto-adapts to SSH Remote, WSL, Local environments
+- **Enhanced Connection Parameters** - Built-in support for `TrustServerCertificate=true`, `Encrypt=false`, `MultipleActiveResultSets=true`
 
-### 📦 简单安装
+## 🚀 Quick Start
+
+### 📦 Simple Installation
 
 ```bash
-# 安装 uv（如果尚未安装）
+# Install uv (if not already installed)
 pip install uv
 
-# 直接运行（无需克隆仓库）
+# Run directly (no need to clone repository)
 uvx mcp-sqlserver-filesystem@latest
 ```
 
-### 🧪 安装与测试
+### 🧪 Installation & Testing
 
 ```bash
-# 测试 Web UI
+# Test Web UI
 uvx mcp-sqlserver-filesystem@latest --test-web
 
-# 测试桌面应用程序 (v0.1.0 新功能)
+# Test desktop application (v0.1.1 new feature)
 uvx mcp-sqlserver-filesystem@latest --test-desktop
 
-# 或使用传统方式
+# Or use traditional way
 uvx mcp-sqlserver-filesystem@latest test --web
 uvx mcp-sqlserver-filesystem@latest test --desktop
 ```
 
-### 📋 系统要求
+### 📋 System Requirements
 
-**Windows 11 用户请确保已安装：**
+**Windows 11 users please ensure you have:**
 
 1. **Python 3.11+** 
    ```bash
-   python --version  # 检查版本
-   # 如果未安装：winget install Python.Python.3.12
+   python --version  # Check version
+   # If not installed: winget install Python.Python.3.12
    ```
 
-2. **ODBC Driver for SQL Server** ⭐ **重要！**
+2. **ODBC Driver for SQL Server** ⭐ **Important!**
    ```bash
-   # 检查驱动：python -c "import pyodbc; print([d for d in pyodbc.drivers() if 'SQL Server' in d])"
-   # 如果没有：winget install Microsoft.ODBCDriverforSQLServer
+   # Check drivers: python -c "import pyodbc; print([d for d in pyodbc.drivers() if 'SQL Server' in d])"
+   # If none: winget install Microsoft.ODBCDriverforSQLServer
    ```
 
-## 🔧 Augment Code 配置
+## 🔧 Augment Code Configuration
 
-添加到您的 Augment Code MCP 设置：
+Add to your Augment Code MCP settings:
 
 ```json
 {
@@ -86,68 +88,72 @@ uvx mcp-sqlserver-filesystem@latest test --desktop
 }
 ```
 
-## 🛠️ 可用工具
+## 🛠️ Available Tools
 
-### 数据库工具
-- `sql_query` - 执行 SQL 查询，结果在 UI 中显示
-- `sql_execute` - 执行 INSERT/UPDATE/DELETE 操作
-- `get_table_schema` - 获取表结构信息
-- `list_tables` - 列出数据库中的所有表
+### Database Tools
+- `sql_query` - Execute SQL queries with UI display
+- `sql_execute` - Execute INSERT/UPDATE/DELETE operations
+- `get_table_schema` - Get table structure information
+- `list_tables` - List all database tables
 
-### 文件系统工具
-- `read_file` - 读取文件内容
-- `write_file` - 写入文件内容（带确认对话框）
-- `list_directory` - 列出目录内容
+### Filesystem Tools
+- `read_file` - Read file contents
+- `write_file` - Write file contents with confirmation
+- `list_directory` - List directory contents
 
-## 📝 使用示例
+## 📝 Usage Examples
 
-在 Augment Code 中尝试：
+In Augment Code, try:
 
 ```
-"执行 SQL 查询：SELECT TOP 10 * FROM Users"
-"显示 Users 表的结构"
-"列出数据库中的所有表"
-"读取文件 config.json"
-"将配置写入 settings.json"
+"Execute SQL query: SELECT TOP 10 * FROM Users"
+"Show me the schema of the Users table"
+"List all tables in the database"
+"Read the file config.json"
+"Write configuration to settings.json"
 ```
 
-## 🔒 配置选项
+## 🔒 Configuration Options
 
-设置环境变量或创建 `.env` 文件：
+Set environment variables or create `.env` file:
 
 ```env
-# SQL Server 配置
+# SQL Server Configuration
 DB_SERVER=localhost
 DB_DATABASE=master
 DB_USE_WINDOWS_AUTH=true
 
-# 增强连接参数
+# Enhanced Connection Parameters
 DB_TRUST_SERVER_CERTIFICATE=true
 DB_ENCRYPT=false
 DB_MULTIPLE_ACTIVE_RESULT_SETS=true
 
-# Web UI 配置
+# Web UI Configuration
 MCP_WEB_HOST=127.0.0.1
 MCP_WEB_PORT=8765
 ```
 
-## 🆕 v0.1.0 新功能
+## 🆕 v0.1.1 New Features
 
-- ✅ **桌面应用程序支持** - 跨平台原生桌面应用
-- ✅ **快速测试命令** - `--test-web` 和 `--test-desktop`
-- ✅ **增强连接参数** - 完整支持 SQL Server 连接选项
-- ✅ **完全访问模式** - 默认允许所有 SQL 命令和文件操作
+- ✅ **Desktop Application Support** - Cross-platform native desktop app
+- ✅ **Quick Test Commands** - `--test-web` and `--test-desktop`
+- ✅ **Enhanced Connection Parameters** - Full SQL Server connection options support
+- ✅ **Full Access Mode** - Default allow all SQL commands and file operations
 
-## 📋 系统要求
+## 📋 System Requirements
 
 - Python 3.11+
 - ODBC Driver for SQL Server
-- Windows/macOS/Linux 支持
+- Windows/macOS/Linux support
 
-## 📄 许可证
+## 🤝 Contributing
 
-MIT License - 详见 [LICENSE](LICENSE) 文件。
+Issues and Pull Requests are welcome!
+
+## 📄 License
+
+MIT License - see [LICENSE](LICENSE) file.
 
 ---
 
-**🎉 在 Augment Code 中享受强大的 SQL Server 和文件系统访问功能！**
+**🎉 Enjoy powerful SQL Server and filesystem access in Augment Code!**
