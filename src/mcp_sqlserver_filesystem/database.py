@@ -118,7 +118,7 @@ class SQLServerManager:
             if connection:
                 connection.close()
     
-    def execute_query(self, query: str, parameters: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+    def execute_query(self, query: str, parameters: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Execute a SELECT query and return results."""
         self._validate_sql_query(query)
         
@@ -133,16 +133,20 @@ class SQLServerManager:
                 result = conn.execute(text(query), parameters or {})
                 
                 # Convert result to list of dictionaries
-                columns = result.keys()
+                columns = list(result.keys())
                 rows = []
                 for row in result:
                     row_dict = {}
-                    for i, value in enumerate(row):
-                        row_dict[columns[i]] = value
+                    for i, col_name in enumerate(columns):
+                        row_dict[col_name] = row[i]
                     rows.append(row_dict)
                 
                 logger.info(f"Query executed successfully, returned {len(rows)} rows")
-                return rows
+                return {
+                    'columns': columns,
+                    'rows': rows,
+                    'row_count': len(rows)
+                }
                 
         except Exception as e:
             logger.error(f"Query execution failed: {e}")
@@ -199,7 +203,7 @@ class SQLServerManager:
         """
         
         try:
-            results = self.execute_query(query, {
+            result = self.execute_query(query, {
                 'table_name': table_name,
                 'schema_name': schema_name
             })
@@ -207,7 +211,7 @@ class SQLServerManager:
             return {
                 'table_name': table_name,
                 'schema_name': schema_name,
-                'columns': results
+                'columns': result['rows']
             }
             
         except Exception as e:
@@ -224,8 +228,8 @@ class SQLServerManager:
         """
         
         try:
-            results = self.execute_query(query, {'schema_name': schema_name})
-            return [row['TABLE_NAME'] for row in results]
+            result = self.execute_query(query, {'schema_name': schema_name})
+            return [row['TABLE_NAME'] for row in result['rows']]
             
         except Exception as e:
             logger.error(f"Failed to get database tables: {e}")
@@ -241,6 +245,150 @@ class SQLServerManager:
         except Exception as e:
             logger.error(f"Database connection test failed: {e}")
             return False
+    
+    def list_tables(self, schema_name: str = "dbo") -> List[str]:
+        """Get list of tables in the database (alias for get_database_tables)."""
+        return self.get_database_tables(schema_name)
+    
+    def execute_with_details(self, query: str, parameters: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Execute query and return detailed results including affected records for INSERT/UPDATE/DELETE."""
+        self._validate_sql_query(query)
+        
+        query_upper = query.strip().upper()
+        is_select = query_upper.startswith('SELECT')
+        is_insert = query_upper.startswith('INSERT')
+        is_update = query_upper.startswith('UPDATE')
+        is_delete = query_upper.startswith('DELETE')
+        
+        if config.security.enable_query_logging:
+            if config.security.log_sensitive_data:
+                logger.info(f"Executing detailed query: {query} with parameters: {parameters}")
+            else:
+                logger.info(f"Executing detailed query: {query}")
+        
+        try:
+            with self.get_connection() as conn:
+                if is_select:
+                    # For SELECT queries, return rows and columns
+                    result = conn.execute(text(query), parameters or {})
+                    columns = list(result.keys())
+                    rows = []
+                    for row in result:
+                        row_dict = {}
+                        for i, col_name in enumerate(columns):
+                            row_dict[col_name] = row[i]
+                        rows.append(row_dict)
+                    
+                    return {
+                        'type': 'select',
+                        'success': True,
+                        'columns': columns,
+                        'rows': rows,
+                        'row_count': len(rows),
+                        'message': f'查询成功，返回 {len(rows)} 行数据'
+                    }
+                
+                elif is_insert or is_update or is_delete:
+                    # For DML queries, get affected records details
+                    affected_records = []
+                    
+                    # Try to get detailed information about affected records
+                    if is_update or is_delete:
+                        # For UPDATE/DELETE, try to get the records before operation
+                        try:
+                            # Extract table name from query (basic parsing)
+                            table_name = self._extract_table_name(query, is_update, is_delete)
+                            if table_name:
+                                # Get records that would be affected
+                                where_clause = self._extract_where_clause(query)
+                                if where_clause:
+                                    preview_query = f"SELECT * FROM {table_name} WHERE {where_clause}"
+                                    preview_result = conn.execute(text(preview_query), parameters or {})
+                                    preview_columns = list(preview_result.keys())
+                                    for row in preview_result:
+                                        row_dict = {}
+                                        for i, col_name in enumerate(preview_columns):
+                                            row_dict[col_name] = row[i]
+                                        affected_records.append(row_dict)
+                        except Exception as preview_error:
+                            logger.debug(f"Could not preview affected records: {preview_error}")
+                    
+                    # Execute the actual query
+                    result = conn.execute(text(query), parameters or {})
+                    conn.commit()
+                    
+                    affected_rows = result.rowcount
+                    
+                    operation_type = 'insert' if is_insert else ('update' if is_update else 'delete')
+                    operation_name = {'insert': '插入', 'update': '更新', 'delete': '删除'}[operation_type]
+                    
+                    response = {
+                        'type': operation_type,
+                        'success': True,
+                        'affected_rows': affected_rows,
+                        'message': f'{operation_name}操作成功，影响了 {affected_rows} 行记录'
+                    }
+                    
+                    if affected_records and (is_update or is_delete):
+                        response['affected_records'] = affected_records
+                        response['message'] += f'，详细记录如下'
+                    
+                    return response
+                
+                else:
+                    # For other queries (DDL, etc.)
+                    result = conn.execute(text(query), parameters or {})
+                    conn.commit()
+                    
+                    return {
+                        'type': 'other',
+                        'success': True,
+                        'message': 'SQL命令执行成功'
+                    }
+                    
+        except Exception as e:
+            logger.error(f"Detailed query execution failed: {e}")
+            return {
+                'type': 'error',
+                'success': False,
+                'error': str(e),
+                'message': f'SQL执行失败: {e}'
+            }
+    
+    def _extract_table_name(self, query: str, is_update: bool, is_delete: bool) -> Optional[str]:
+        """Extract table name from UPDATE or DELETE query."""
+        try:
+            import re
+            query_upper = query.upper()
+            
+            if is_update:
+                # UPDATE table_name SET ...
+                match = re.search(r'UPDATE\s+(\[?\w+\]?\.?\[?\w+\]?)\s+SET', query_upper)
+            elif is_delete:
+                # DELETE FROM table_name WHERE ...
+                match = re.search(r'DELETE\s+FROM\s+(\[?\w+\]?\.?\[?\w+\]?)', query_upper)
+            else:
+                return None
+            
+            if match:
+                return match.group(1).strip()
+            return None
+        except Exception:
+            return None
+    
+    def _extract_where_clause(self, query: str) -> Optional[str]:
+        """Extract WHERE clause from query."""
+        try:
+            import re
+            query_upper = query.upper()
+            
+            # Find WHERE clause
+            match = re.search(r'WHERE\s+(.+?)(?:ORDER\s+BY|GROUP\s+BY|$)', query_upper, re.DOTALL)
+            if match:
+                return match.group(1).strip()
+            return None
+        except Exception:
+            return None
     
     def close(self) -> None:
         """Close database engine and all connections."""

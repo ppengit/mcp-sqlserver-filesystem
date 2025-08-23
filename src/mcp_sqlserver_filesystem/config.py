@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Set
 from pydantic import BaseModel, Field, validator
 from dotenv import load_dotenv
+from . import __version__
 
 # Load environment variables from .env file
 load_dotenv()
@@ -138,7 +139,7 @@ class ServerConfig(BaseModel):
     """MCP server configuration."""
     
     name: str = Field("mcp-sqlserver-filesystem", description="Server name")
-    version: str = Field("0.1.0", description="Server version")
+    version: str = Field(__version__, description="Server version")
     debug: bool = Field(False, description="Enable debug mode")
     log_level: str = Field("INFO", description="Logging level")
     log_file: Optional[str] = Field(None, description="Log file path")

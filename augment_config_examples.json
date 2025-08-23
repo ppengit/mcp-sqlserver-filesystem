@@ -1,123 +1,89 @@
 ﻿{
-  "开发模式配置": {
-    "description": "使用当前项目目录的开发模式配置",
+  "推荐使用方式 (uvx @latest)": {
+    "description": "推荐使用方式：用户只需安装uv和ODBC Driver，无需本地安装",
     "config": {
       "mcpServers": {
         "mcp-sqlserver-filesystem": {
-          "command": "python",
-          "args": ["-m", "mcp_sqlserver_filesystem"],
-          "cwd": "D:/Solution/jj-mcp",
+          "command": "uvx",
+          "args": ["mcp-sqlserver-filesystem@latest"],
           "timeout": 600,
           "env": {
-            "PYTHONPATH": "D:/Solution/jj-mcp/src",
-            "DB_SERVER": "localhost",
-            "DB_DATABASE": "master",
-            "DB_USE_WINDOWS_AUTH": "true",
-            "DB_TRUST_SERVER_CERTIFICATE": "true",
-            "DB_ENCRYPT": "false",
-            "DB_MULTIPLE_ACTIVE_RESULT_SETS": "true",
-            "MCP_DEBUG": "true",
-            "MCP_WEB_HOST": "127.0.0.1",
-            "MCP_WEB_PORT": "8765"
-          },
-          "autoApprove": [
-            "sql_query",
-            "list_tables",
-            "get_table_schema",
-            "read_file",
-            "list_directory"
-          ]
-        }
-      }
-    }
-  },
-  
-  "SQL Server认证配置": {
-    "description": "使用SQL Server用户名密码认证",
-    "config": {
-      "mcpServers": {
-        "mcp-sqlserver-filesystem": {
-          "command": "python",
-          "args": ["-m", "mcp_sqlserver_filesystem"],
-          "cwd": "D:/Solution/jj-mcp",
-          "timeout": 600,
-          "env": {
-            "PYTHONPATH": "D:/Solution/jj-mcp/src",
-            "DB_SERVER": "your-sql-server",
-            "DB_DATABASE": "your-database",
-            "DB_USE_WINDOWS_AUTH": "false",
-            "DB_USERNAME": "your-username",
-            "DB_PASSWORD": "your-password",
-            "DB_TRUST_SERVER_CERTIFICATE": "true",
-            "DB_ENCRYPT": "false",
-            "DB_MULTIPLE_ACTIVE_RESULT_SETS": "true",
-            "MCP_DEBUG": "true",
-            "MCP_WEB_HOST": "127.0.0.1",
-            "MCP_WEB_PORT": "8765"
-          },
-          "autoApprove": [
-            "sql_query",
-            "list_tables",
-            "get_table_schema"
-          ]
-        }
-      }
-    }
-  },
-  
-  "生产环境配置": {
-    "description": "生产环境安全配置",
-    "config": {
-      "mcpServers": {
-        "mcp-sqlserver-filesystem": {
-          "command": "python",
-          "args": ["-m", "mcp_sqlserver_filesystem"],
-          "cwd": "D:/Solution/jj-mcp",
-          "timeout": 600,
-          "env": {
-            "PYTHONPATH": "D:/Solution/jj-mcp/src",
-            "DB_SERVER": "prod-server.company.com",
-            "DB_DATABASE": "ProductionDB",
-            "DB_USE_WINDOWS_AUTH": "false",
-            "DB_USERNAME": "prod_user",
-            "DB_PASSWORD": "secure_password",
-            "DB_TRUST_SERVER_CERTIFICATE": "false",
-            "DB_ENCRYPT": "true",
-            "DB_MULTIPLE_ACTIVE_RESULT_SETS": "true",
-            "MCP_DEBUG": "false",
-            "MCP_WEB_HOST": "127.0.0.1",
-            "MCP_WEB_PORT": "8765"
-          },
-          "autoApprove": [
-            "sql_query",
-            "list_tables",
-            "get_table_schema"
-          ]
-        }
-      }
-    }
-  },
-  
-  "SSH Remote环境配置": {
-    "description": "SSH远程开发环境配置",
-    "config": {
-      "mcpServers": {
-        "mcp-sqlserver-filesystem": {
-          "command": "python",
-          "args": ["-m", "mcp_sqlserver_filesystem"],
-          "cwd": "/path/to/your/project",
-          "timeout": 600,
-          "env": {
-            "PYTHONPATH": "/path/to/your/project/src",
             "DB_SERVER": "localhost",
             "DB_DATABASE": "your_database",
             "DB_USE_WINDOWS_AUTH": "true",
             "DB_TRUST_SERVER_CERTIFICATE": "true",
             "DB_ENCRYPT": "false",
-            "DB_MULTIPLE_ACTIVE_RESULT_SETS": "true",
-            "MCP_DEBUG": "true",
-            "MCP_WEB_HOST": "0.0.0.0",
-            "MCP_WEB_PORT": "8765"
+            "FS_ALLOWED_PATHS": "C:\\Users\\YourName\\Documents,D:\\Projects",
+            "FS_ALLOWED_EXTENSIONS": ".txt,.md,.py,.json,.sql,.csv",
+            "FS_IGNORE_FILE_LOCKS": "true"
+          },
+          "autoApprove": [
+            "sql_query",
+            "list_tables",
+            "get_table_schema",
+            "read_file",
+            "write_file",
+            "list_directory"
+          ]
+        }
+      }
+    }
+  },
+
+  "SQL Server认证 + 文件系统全访问": {
+    "description": "使用SQL Server认证，文件系统全访问模式",
+    "config": {
+      "mcpServers": {
+        "mcp-sqlserver-filesystem": {
+          "command": "uvx",
+          "args": ["mcp-sqlserver-filesystem@latest"],
+          "timeout": 600,
+          "env": {
+            "DB_SERVER": "your-sql-server",
+            "DB_DATABASE": "your_database",
+            "DB_USE_WINDOWS_AUTH": "false",
+            "DB_USERNAME": "sa",
+            "DB_PASSWORD": "your_password",
+            "DB_TRUST_SERVER_CERTIFICATE": "true",
+            "FS_ALLOWED_PATHS": "*",
+            "FS_ALLOWED_EXTENSIONS": "*.*",
+            "FS_IGNORE_FILE_LOCKS": "true"
+          },
+          "autoApprove": [
+            "sql_query",
+            "list_tables",
+            "get_table_schema",
+            "read_file",
+            "write_file",
+            "list_directory"
+          ]
+        }
+      }
+    }
+  },
+
+  "安全限制模式": {
+    "description": "生产环境安全配置，限制文件系统访问和SQL操作",
+    "config": {
+      "mcpServers": {
+        "mcp-sqlserver-filesystem": {
+          "command": "uvx",
+          "args": ["mcp-sqlserver-filesystem@latest"],
+          "timeout": 600,
+          "env": {
+            "DB_SERVER": "prod-server.company.com",
+            "DB_DATABASE": "ProductionDB",
+            "DB_USE_WINDOWS_AUTH": "false",
+            "DB_USERNAME": "readonly_user",
+            "DB_PASSWORD": "secure_password",
+            "DB_TRUST_SERVER_CERTIFICATE": "false",
+            "DB_ENCRYPT": "true",
+            "FS_ALLOWED_PATHS": "C:\\Projects\\Safe,D:\\Data\\ReadOnly",
+            "FS_ALLOWED_EXTENSIONS": ".txt,.log,.json,.csv",
+            "FS_ENABLE_WRITE": "false",
+            "FS_ENABLE_DELETE": "false",
+            "SEC_ENABLE_SQL_PROTECTION": "true",
+            "SEC_MAX_QUERY_LENGTH": "1000"
           },
           "autoApprove": [
             "sql_query",
@@ -130,37 +96,34 @@
       }
     }
   },
-  
-  "桌面应用模式配置": {
-    "description": "启用桌面应用程序界面",
+
+  "开发模式 (本地安装)": {
+    "description": "本地开发使用，适用于已克隆项目的开发者",
     "config": {
       "mcpServers": {
         "mcp-sqlserver-filesystem": {
           "command": "python",
           "args": ["-m", "mcp_sqlserver_filesystem"],
-          "cwd": "D:/Solution/jj-mcp",
+          "cwd": "D:/Solution/mcp-sqlserver-filesystem",
           "timeout": 600,
           "env": {
-            "PYTHONPATH": "D:/Solution/jj-mcp/src",
+            "PYTHONPATH": "D:/Solution/mcp-sqlserver-filesystem/src",
             "DB_SERVER": "localhost",
             "DB_DATABASE": "master",
             "DB_USE_WINDOWS_AUTH": "true",
-            "DB_TRUST_SERVER_CERTIFICATE": "true",
-            "DB_ENCRYPT": "false",
-            "DB_MULTIPLE_ACTIVE_RESULT_SETS": "true",
-            "MCP_DEBUG": "true",
-            "MCP_DESKTOP_MODE": "true",
-            "MCP_WEB_PORT": "8765"
+            "FS_ALLOWED_PATHS": "*",
+            "FS_ALLOWED_EXTENSIONS": "*.*",
+            "MCP_DEBUG": "true"
           },
           "autoApprove": [
             "sql_query",
             "list_tables",
             "get_table_schema",
             "read_file",
+            "write_file",
             "list_directory"
           ]
         }
       }
     }
   }
-}
