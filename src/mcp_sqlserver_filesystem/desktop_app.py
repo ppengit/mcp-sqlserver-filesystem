@@ -193,7 +193,7 @@ class DesktopApp:
             subprocess.run(["cargo", "tauri", "--version"], 
                          check=True, capture_output=True, cwd=tauri_dir)
         except (subprocess.CalledProcessError, FileNotFoundError):
-            raise Exception("Tauri CLI not found. Please install with: cargo install tauri-cli")
+            raise Exception("Desktop application not available. Please use Web UI instead: mcp-sqlserver-filesystem test --web")
         
         # Launch in development mode
         cmd = ["cargo", "tauri", "dev"]
@@ -313,31 +313,15 @@ class DesktopApp:
     def is_available(self) -> bool:
         """Check if desktop application is available."""
         try:
-            tauri_dir = Path(__file__).parent.parent.parent / "src-tauri"
-            
-            # Check if Tauri configuration exists
-            if not (tauri_dir / "tauri.conf.json").exists():
-                logger.debug("Tauri configuration not found")
-                return False
-            
-            if not (tauri_dir / "Cargo.toml").exists():
-                logger.debug("Cargo.toml not found")
-                return False
-            
             # Check for pre-built executable first
             if self._has_prebuilt_executable():
                 logger.info("Found pre-built desktop executable")
                 return True
             
-            # Check if Rust/Cargo is available for development build
-            try:
-                subprocess.run(["cargo", "--version"], 
-                             check=True, capture_output=True)
-                logger.info("Rust toolchain available for building desktop app")
-                return True
-            except (subprocess.CalledProcessError, FileNotFoundError):
-                logger.debug("Rust toolchain not available")
-                return False
+            # For now, if no pre-built executable is available, return False
+            # This will trigger Web UI fallback, which is the intended behavior
+            logger.debug("No pre-built executable found, will use Web UI fallback")
+            return False
             
         except Exception as e:
             logger.debug(f"Desktop availability check failed: {e}")
@@ -441,14 +425,8 @@ async def launch_desktop_app(test_mode: bool = False) -> DesktopApp:
             "Desktop application not available.\n\n"
             "Solutions:\n"
             "1. 🌐 Use Web UI instead: mcp-sqlserver-filesystem test --web\n"
-            "2. 🔧 Install Rust toolchain:\n"
-            "   - Download and install Rust: https://rustup.rs/\n"
-            "   - Install Tauri CLI: cargo install tauri-cli\n"
-            "   - Then retry: mcp-sqlserver-filesystem test --desktop\n\n"
-            "3. 📦 For developers - Build desktop app:\n"
-            "   - python scripts/build_desktop.py install-deps\n"
-            "   - python scripts/build_desktop.py build-desktop-release\n\n"
-            "Note: The Web UI provides the same functionality without requiring Rust."
+            "2. 📦 Desktop binary files will be available in future releases\n\n"
+            "Note: The Web UI provides the same functionality without requiring additional setup."
         )
         
         logger.error(error_msg)

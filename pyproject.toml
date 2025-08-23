@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mcp-sqlserver-filesystem"
-version = "0.1.7"
+version = "0.2.0"
 description = "Enhanced MCP server for SQL Server and filesystem access with dual interface support (Web UI and Desktop Application)"
 authors = [
     {name = "PJ", email = "peng.it@qq.com"}
@@ -12,7 +12,7 @@ authors = [
 readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.11"
-keywords = ["mcp", "sqlserver", "filesystem", "web-ui", "desktop-app", "interactive", "database", "cross-platform", "tauri", "dual-interface", "rust", "native-app"]
+keywords = ["mcp", "sqlserver", "filesystem", "web-ui", "desktop-app", "interactive", "database", "cross-platform", "dual-interface", "native-app", "precompiled-binaries"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -92,6 +92,7 @@ include = [
     "/scripts",
     "/tests",
     "/README.md",
+    "/README_EN.md",
     "/LICENSE",
     "/Makefile",
     "/build.bat",
@@ -99,10 +100,13 @@ include = [
     "/src/mcp_sqlserver_filesystem/desktop_binaries",
 ]
 
+# 桌面应用程序二进制文件现在直接存储在 Git 中
+# 由 build-desktop.yml 工作流程自动构建并提交
+
 # Desktop Application Configuration
 [tool.desktop]
 name = "MCP SQL Server Filesystem"
-version = "0.1.7"
+version = "0.2.0"
 identifier = "com.penjay.mcp-sqlserver-filesystem"
 author = "PJ"
 email = "peng.it@qq.com"

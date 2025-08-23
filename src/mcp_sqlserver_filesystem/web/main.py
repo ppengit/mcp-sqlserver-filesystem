@@ -44,7 +44,8 @@ class WebUIManager:
         # 自动寻找可用端口
         self.port = self._find_available_port(self.port)
         
-        self.app = FastAPI(title="MCP SQL Server Filesystem UI", version="0.1.0")
+        from .. import __version__
+        self.app = FastAPI(title="MCP SQL Server Filesystem UI", version=__version__)
         self.server_thread: Optional[threading.Thread] = None
         self.server_process = None
         self.is_running_flag = False
@@ -134,7 +135,9 @@ class WebUIManager:
     
     def _get_home_html(self) -> str:
         """获取主页HTML"""
-        return """
+        from .. import __version__, __author__
+        
+        return f"""
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -287,7 +290,7 @@ class WebUIManager:
         </div>
         
         <div class="footer">
-            <p>MCP SQL Server Filesystem v0.1.0 | 基于 FastAPI 和 WebSocket</p>
+            <p>MCP SQL Server Filesystem v{__version__} | 作者: {__author__} | 基于 FastAPI 和 WebSocket</p>
         </div>
     </div>
     

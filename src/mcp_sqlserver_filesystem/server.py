@@ -719,7 +719,7 @@ async def main():
             write_stream,
             InitializationOptions(
                 server_name="mcp-sqlserver-filesystem",
-                server_version="0.1.0",
+                server_version=__version__,
                 capabilities=server.get_capabilities(
                     notification_options=None,
                     experimental_capabilities={}

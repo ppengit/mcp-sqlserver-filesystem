@@ -48,7 +48,7 @@ def main():
         "--web", action="store_true", help="测试 Web UI (自动持续运行)"
     )
     test_parser.add_argument(
-        "--desktop", action="store_true", help="测试桌面应用程序 (v0.1.0 新功能)"
+        "--desktop", action="store_true", help="测试桌面应用程序"
     )
     test_parser.add_argument(
         "--timeout", type=int, default=60, help="测试超时时间 (秒)"
@@ -62,7 +62,7 @@ def main():
         "--test-web", action="store_true", help="快速测试 Web UI"
     )
     parser.add_argument(
-        "--test-desktop", action="store_true", help="快速测试桌面应用程序 (v0.1.0 新功能)"
+        "--test-desktop", action="store_true", help="快速测试桌面应用程序"
     )
 
     args = parser.parse_args()
@@ -265,90 +265,31 @@ with open('config.json', 'r') as f:
 
 
 def test_desktop_app():
-    """测试桌面应用程序 (v0.1.4 增强功能)"""
+    """测试桌面应用程序功能"""
     try:
-        print("🖥️ 测试桌面应用程序 (v0.1.4 增强功能)")
+        print("🖥️ 测试桌面应用程序功能")
         print("=" * 50)
-
+        
         print("🔧 检查桌面应用程序依赖...")
-
-        # 尝试导入桌面应用程序模块
+        
+        # 使用新的智能启动器
         try:
-            from .desktop_app import launch_desktop_app, is_desktop_app_available
-            print("✅ 桌面应用程序模块导入成功")
+            from .desktop_launcher import launch_desktop_app
+            print("✅ 找到桌面应用启动器")
+            
+            # 启动桌面应用（智能回退机制）
+            success = launch_desktop_app(test_mode=True)
+            return success
+            
         except ImportError as e:
-            print(f"❌ 无法导入桌面应用程序模块: {e}")
+            print(f"❌ 无法导入桌面应用启动器: {e}")
             print("🔄 自动回退到 Web UI 模式...")
-            return test_web_server()
-
-        # 检查桌面应用是否可用
-        if not is_desktop_app_available():
-            print("⚠️  桌面应用程序环境不满足要求")
-            print("")
-            print("💡 需要的环境：")
-            print("   1. 🦀 Rust 工具链 (https://rustup.rs/)")
-            print("   2. 🔧 Tauri CLI (cargo install tauri-cli)")
-            print("   或者预编译的桌面应用程序")
-            print("")
-            print("🌐 自动启动 Web UI 替代方案...")
-            print("💡 Web UI 提供完全相同的功能，无需额外安装")
-            print("")
-            return test_web_server()
-
-        print("🚀 启动桌面应用程序...")
-
-        # 设置桌面模式环境变量
-        import os
-        os.environ["MCP_DESKTOP_MODE"] = "true"
-
-        # 使用 asyncio 启动桌面应用程序
-        import sys
-        import asyncio
-        if sys.platform == "win32":
-            asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
-
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-
-        try:
-            # 使用 WebUIManager 来管理桌面应用实例
-            from .web.main import get_web_ui_manager
-
-            manager = get_web_ui_manager()
-
-            # 启动桌面应用并保存实例到 manager
-            app = loop.run_until_complete(launch_desktop_app(test_mode=True))
-            manager.desktop_app_instance = app
-
-            print("✅ 桌面应用程序启动成功")
-            print("🖥️ 原生桌面窗口已打开")
-            print("💡 桌面应用程序正在运行，按 Ctrl+C 停止...")
-
-            # 保持应用程序运行
-            try:
-                while True:
-                    import time
-                    time.sleep(1)
-            except KeyboardInterrupt:
-                print("\n🛑 停止桌面应用程序...")
-                app.stop()
-                return True
-
-        except Exception as e:
-            print(f"❌ 桌面应用程序启动失败: {e}")
-            print("🔄 自动回退到 Web UI 模式...")
-            return test_web_server()
-        finally:
-            loop.close()
-
+            return test_web_ui_simple()
+            
     except Exception as e:
         print(f"❌ 桌面应用程序测试失败: {e}")
         print("🔄 自动回退到 Web UI 模式...")
-        return test_web_server()
-    finally:
-        # 清理环境变量
-        import os
-        os.environ.pop("MCP_DESKTOP_MODE", None)
+        return test_web_ui_simple()
 
 
 def show_version():
