@@ -1,4 +1,4 @@
-﻿"""UI Manager for desktop application interface."""
+"""UI Manager for desktop application interface."""
 
 import asyncio
 import json

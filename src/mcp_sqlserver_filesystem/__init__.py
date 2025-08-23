@@ -1,4 +1,4 @@
-﻿"""
+"""
 MCP SQL Server Filesystem
 =========================
 

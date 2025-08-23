@@ -1,4 +1,4 @@
-﻿"""Configuration management for MCP SQL Server Filesystem server."""
+"""Configuration management for MCP SQL Server Filesystem server."""
 
 import os
 from pathlib import Path

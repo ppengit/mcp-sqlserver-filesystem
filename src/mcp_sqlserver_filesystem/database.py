@@ -1,4 +1,4 @@
-﻿"""SQL Server database operations for MCP server."""
+"""SQL Server database operations for MCP server."""
 
 import logging
 import re

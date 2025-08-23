@@ -1,4 +1,4 @@
-﻿"""Filesystem operations for MCP server."""
+"""Filesystem operations for MCP server."""
 
 import logging
 import os

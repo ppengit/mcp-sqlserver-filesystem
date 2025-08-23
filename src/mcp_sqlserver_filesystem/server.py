@@ -1,4 +1,4 @@
-﻿"""MCP Server for SQL Server and Filesystem Access."""
+"""MCP Server for SQL Server and Filesystem Access."""
 
 import asyncio
 import logging

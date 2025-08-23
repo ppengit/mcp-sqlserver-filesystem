@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 MCP SQL Server Filesystem - 主程序入口
 =====================================
