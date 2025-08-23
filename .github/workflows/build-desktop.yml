@@ -99,7 +99,7 @@ jobs:
           fi
 
       - name: Upload binaries
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: desktop-binaries-${{ matrix.platform }}-${{ matrix.arch }}
           path: src/mcp_sqlserver_filesystem/desktop_binaries/
@@ -116,7 +116,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           path: artifacts
 
