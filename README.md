@@ -49,15 +49,30 @@ uvx mcp-sqlserver-filesystem@latest test --desktop
    # If not installed: winget install Python.Python.3.12
    ```
 
-2. **ODBC Driver for SQL Server** ⭐ **Important!**
+2. **ODBC Driver for SQL Server** ⭐ **Critical Requirement!**
+   
+   **Check existing drivers:**
    ```bash
-   # Check drivers: python -c "import pyodbc; print([d for d in pyodbc.drivers() if 'SQL Server' in d])"
-   # If none: winget install Microsoft.ODBCDriverforSQLServer
+   python -c "import pyodbc; print([d for d in pyodbc.drivers() if 'SQL Server' in d])"
    ```
+   
+   **Install methods:**
+   ```bash
+   # Method 1: winget (recommended)
+   winget install Microsoft.ODBCDriverforSQLServer
+   
+   # Method 2: Chocolatey
+   choco install sqlserver-odbcdriver
+   ```
+   
+   **Manual download links:**
+   - **ODBC Driver 18** (latest): https://go.microsoft.com/fwlink/?linkid=2249006
+   - **ODBC Driver 17** (stable): https://go.microsoft.com/fwlink/?linkid=2249005
+   - **All versions**: https://docs.microsoft.com/en-us/sql/connect/odbc/download-odbc-driver-for-sql-server
 
 ## 🔧 Augment Code Configuration
 
-Add to your Augment Code MCP settings:
+### Option 1: Windows Authentication (Recommended for local development)
 
 ```json
 {
@@ -70,6 +85,39 @@ Add to your Augment Code MCP settings:
         "DB_SERVER": "localhost",
         "DB_DATABASE": "master",
         "DB_USE_WINDOWS_AUTH": "true",
+        "DB_TRUST_SERVER_CERTIFICATE": "true",
+        "DB_ENCRYPT": "false",
+        "DB_MULTIPLE_ACTIVE_RESULT_SETS": "true"
+      },
+      "autoApprove": [
+        "sql_query",
+        "sql_execute",
+        "list_tables",
+        "get_table_schema",
+        "read_file",
+        "write_file",
+        "list_directory"
+      ]
+    }
+  }
+}
+```
+
+### Option 2: SQL Server Authentication (For remote servers or specific users)
+
+```json
+{
+  "mcpServers": {
+    "mcp-sqlserver-filesystem": {
+      "command": "uvx",
+      "args": ["mcp-sqlserver-filesystem@latest"],
+      "timeout": 600,
+      "env": {
+        "DB_SERVER": "your-sql-server",
+        "DB_DATABASE": "your-database",
+        "DB_USE_WINDOWS_AUTH": "false",
+        "DB_USERNAME": "your-username",
+        "DB_PASSWORD": "your-password",
         "DB_TRUST_SERVER_CERTIFICATE": "true",
         "DB_ENCRYPT": "false",
         "DB_MULTIPLE_ACTIVE_RESULT_SETS": "true"
@@ -115,22 +163,26 @@ In Augment Code, try:
 
 ## 🔒 Configuration Options
 
-Set environment variables or create `.env` file:
-
+### Windows Authentication
 ```env
-# SQL Server Configuration
 DB_SERVER=localhost
 DB_DATABASE=master
 DB_USE_WINDOWS_AUTH=true
-
-# Enhanced Connection Parameters
 DB_TRUST_SERVER_CERTIFICATE=true
 DB_ENCRYPT=false
 DB_MULTIPLE_ACTIVE_RESULT_SETS=true
+```
 
-# Web UI Configuration
-MCP_WEB_HOST=127.0.0.1
-MCP_WEB_PORT=8765
+### SQL Server Authentication
+```env
+DB_SERVER=your-sql-server
+DB_DATABASE=your-database
+DB_USE_WINDOWS_AUTH=false
+DB_USERNAME=your-username
+DB_PASSWORD=your-password
+DB_TRUST_SERVER_CERTIFICATE=true
+DB_ENCRYPT=false
+DB_MULTIPLE_ACTIVE_RESULT_SETS=true
 ```
 
 ## 🆕 v0.1.1 New Features
@@ -139,16 +191,21 @@ MCP_WEB_PORT=8765
 - ✅ **Quick Test Commands** - `--test-web` and `--test-desktop`
 - ✅ **Enhanced Connection Parameters** - Full SQL Server connection options support
 - ✅ **Full Access Mode** - Default allow all SQL commands and file operations
+- ✅ **Dual Authentication** - Windows Auth and SQL Server Auth support
 
 ## 📋 System Requirements
 
 - Python 3.11+
-- ODBC Driver for SQL Server
+- ODBC Driver for SQL Server (17 or 18)
 - Windows/macOS/Linux support
 
 ## 🤝 Contributing
 
 Issues and Pull Requests are welcome!
+
+## 👨‍💻 Author
+
+Created by **PJ** - Enhanced MCP server for SQL Server and filesystem access.
 
 ## 📄 License
 
@@ -157,3 +214,5 @@ MIT License - see [LICENSE](LICENSE) file.
 ---
 
 **🎉 Enjoy powerful SQL Server and filesystem access in Augment Code!**
+
+*Made with ❤️ by PJ*

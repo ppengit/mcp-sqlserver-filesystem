@@ -20,7 +20,7 @@ License: MIT
 """
 
 __version__ = "0.1.1"
-__author__ = "penjay"
+__author__ = "PJ"
 __email__ = "peng.it@qq.com"
 __license__ = "MIT"
 

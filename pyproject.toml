@@ -7,7 +7,7 @@ name = "mcp-sqlserver-filesystem"
 version = "0.1.1"
 description = "Enhanced MCP server for SQL Server and filesystem access with dual interface support (Web UI and Desktop Application)"
 authors = [
-    {name = "penjay", email = "peng.it@qq.com"}
+    {name = "PJ", email = "peng.it@qq.com"}
 ]
 readme = "README.md"
 license = {text = "MIT"}
