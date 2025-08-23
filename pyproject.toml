@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mcp-sqlserver-filesystem"
-version = "0.1.6"
+version = "0.1.7"
 description = "Enhanced MCP server for SQL Server and filesystem access with dual interface support (Web UI and Desktop Application)"
 authors = [
     {name = "PJ", email = "peng.it@qq.com"}
@@ -102,7 +102,7 @@ include = [
 # Desktop Application Configuration
 [tool.desktop]
 name = "MCP SQL Server Filesystem"
-version = "0.1.6"
+version = "0.1.7"
 identifier = "com.penjay.mcp-sqlserver-filesystem"
 author = "PJ"
 email = "peng.it@qq.com"

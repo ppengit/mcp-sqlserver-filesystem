@@ -279,7 +279,7 @@ def test_desktop_app():
         except ImportError as e:
             print(f"❌ 无法导入桌面应用程序模块: {e}")
             print("🔄 自动回退到 Web UI 模式...")
-            return test_web_ui()
+            return test_web_server()
 
         # 检查桌面应用是否可用
         if not is_desktop_app_available():
@@ -293,7 +293,7 @@ def test_desktop_app():
             print("🌐 自动启动 Web UI 替代方案...")
             print("💡 Web UI 提供完全相同的功能，无需额外安装")
             print("")
-            return test_web_ui()
+            return test_web_server()
 
         print("🚀 启动桌面应用程序...")
 
@@ -337,14 +337,14 @@ def test_desktop_app():
         except Exception as e:
             print(f"❌ 桌面应用程序启动失败: {e}")
             print("🔄 自动回退到 Web UI 模式...")
-            return test_web_ui()
+            return test_web_server()
         finally:
             loop.close()
 
     except Exception as e:
         print(f"❌ 桌面应用程序测试失败: {e}")
         print("🔄 自动回退到 Web UI 模式...")
-        return test_web_ui()
+        return test_web_server()
     finally:
         # 清理环境变量
         import os
