@@ -90,21 +90,19 @@ include = [
     "/src",
     "/src-tauri",
     "/scripts",
-    "/README.md",
-    "/pyproject.toml",
-    "/src/mcp_sqlserver_filesystem/desktop_binaries",
-]
     "/tests",
     "/README.md",
     "/LICENSE",
     "/Makefile",
     "/build.bat",
+    "/pyproject.toml",
+    "/src/mcp_sqlserver_filesystem/desktop_binaries",
 ]
 
 # Desktop Application Configuration
 [tool.desktop]
 name = "MCP SQL Server Filesystem"
-version = "0.1.3"
+version = "0.1.5"
 identifier = "com.penjay.mcp-sqlserver-filesystem"
 author = "PJ"
 email = "peng.it@qq.com"
