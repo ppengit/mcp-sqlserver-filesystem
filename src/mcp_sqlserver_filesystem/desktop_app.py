@@ -90,20 +90,91 @@ class DesktopApp:
     async def _launch_tauri_app(self):
         """Launch the Tauri desktop application."""
         try:
-            tauri_dir = Path(__file__).parent.parent.parent / "src-tauri"
-            
-            if not tauri_dir.exists():
-                raise Exception(f"Tauri directory not found: {tauri_dir}")
-            
-            # Check if we're in development or production
-            if self._is_development():
-                await self._launch_tauri_dev()
+            # First try to launch pre-built executable
+            if self._has_prebuilt_executable():
+                await self._launch_prebuilt_executable()
             else:
-                await self._launch_tauri_prod()
+                # Fallback: try to build and run (development mode)
+                tauri_dir = Path(__file__).parent.parent.parent / "src-tauri"
+                
+                if not tauri_dir.exists():
+                    raise Exception(f"Tauri directory not found: {tauri_dir}")
+                
+                # Check if we're in development or production
+                if self._is_development():
+                    await self._launch_tauri_dev()
+                else:
+                    raise Exception("No pre-built executable found and not in development mode")
                 
         except Exception as e:
             logger.error(f"Failed to launch Tauri app: {e}")
             raise
+    
+    async def _launch_prebuilt_executable(self):
+        """Launch pre-built Tauri executable."""
+        logger.info("Launching pre-built desktop application...")
+        
+        executable_path = None
+        
+        # First try development build location
+        tauri_dir = Path(__file__).parent.parent.parent / "src-tauri"
+        target_dir = tauri_dir / "target" / "release"
+        executable_name = self._get_executable_name()
+        dev_executable = target_dir / executable_name
+        
+        if dev_executable.exists():
+            executable_path = dev_executable
+            logger.info(f"Using development build: {executable_path}")
+        else:
+            # Try to extract from package
+            package_binary = self._get_package_binary_path()
+            if package_binary and package_binary.exists():
+                # Copy to temp location and make executable
+                import tempfile
+                import stat
+                
+                temp_dir = Path(tempfile.gettempdir()) / "mcp-sqlserver-filesystem"
+                temp_dir.mkdir(exist_ok=True)
+                
+                executable_path = temp_dir / executable_name
+                
+                # Copy binary to temp location
+                import shutil
+                shutil.copy2(package_binary, executable_path)
+                
+                # Make executable (Unix systems)
+                if sys.platform != "win32":
+                    executable_path.chmod(executable_path.stat().st_mode | stat.S_IEXEC)
+                
+                logger.info(f"Extracted package binary to: {executable_path}")
+        
+        if not executable_path or not executable_path.exists():
+            raise Exception("No pre-built executable found")
+        
+        logger.info(f"Launching executable: {executable_path}")
+        
+        # Launch the executable
+        if self.test_mode:
+            self.tauri_process = subprocess.Popen(
+                [str(executable_path)],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+            )
+            
+            # Wait a bit for the app to start
+            await asyncio.sleep(3)
+            
+            if self.tauri_process.poll() is not None:
+                # Process ended, check for errors
+                stdout, stderr = self.tauri_process.communicate()
+                error_msg = stderr.decode() if stderr else "Unknown error"
+                raise Exception(f"Pre-built executable failed: {error_msg}")
+                
+            logger.info("Pre-built desktop application launched successfully")
+        else:
+            # For production, run directly
+            subprocess.run([str(executable_path)])
     
     def _is_development(self) -> bool:
         """Check if we're running in development mode."""
@@ -246,22 +317,96 @@ class DesktopApp:
             
             # Check if Tauri configuration exists
             if not (tauri_dir / "tauri.conf.json").exists():
+                logger.debug("Tauri configuration not found")
                 return False
             
             if not (tauri_dir / "Cargo.toml").exists():
+                logger.debug("Cargo.toml not found")
                 return False
             
-            # Check if Rust/Cargo is available
+            # Check for pre-built executable first
+            if self._has_prebuilt_executable():
+                logger.info("Found pre-built desktop executable")
+                return True
+            
+            # Check if Rust/Cargo is available for development build
             try:
                 subprocess.run(["cargo", "--version"], 
                              check=True, capture_output=True)
+                logger.info("Rust toolchain available for building desktop app")
+                return True
             except (subprocess.CalledProcessError, FileNotFoundError):
+                logger.debug("Rust toolchain not available")
                 return False
             
-            return True
-            
-        except Exception:
+        except Exception as e:
+            logger.debug(f"Desktop availability check failed: {e}")
             return False
+    
+    def _has_prebuilt_executable(self) -> bool:
+        """Check if pre-built executable exists."""
+        try:
+            # First check in development build location
+            tauri_dir = Path(__file__).parent.parent.parent / "src-tauri"
+            target_dir = tauri_dir / "target" / "release"
+            
+            executable_name = self._get_executable_name()
+            executable_path = target_dir / executable_name
+            
+            if executable_path.exists() and executable_path.is_file():
+                logger.debug(f"Found development build: {executable_path}")
+                return True
+            
+            # Check in package binaries directory
+            package_binary = self._get_package_binary_path()
+            if package_binary and package_binary.exists():
+                logger.debug(f"Found package binary: {package_binary}")
+                return True
+            
+            logger.debug("No pre-built executable found")
+            return False
+        except Exception as e:
+            logger.debug(f"Error checking for pre-built executable: {e}")
+            return False
+    
+    def _get_package_binary_path(self) -> Optional[Path]:
+        """Get path to packaged binary for current platform."""
+        try:
+            import platform
+            
+            # Get current platform info
+            current_platform = platform.system().lower()
+            current_arch = platform.machine().lower()
+            
+            # Normalize architecture names
+            if current_arch in ['amd64', 'x86_64']:
+                current_arch = 'x86_64'
+            elif current_arch in ['arm64', 'aarch64']:
+                current_arch = 'arm64'
+            
+            # Look for binaries directory in package
+            binaries_dir = Path(__file__).parent / "desktop_binaries"
+            if not binaries_dir.exists():
+                return None
+            
+            # Look for platform-specific executable
+            executable_name = self._get_executable_name()
+            binary_pattern = f"{executable_name}.{current_platform}-{current_arch}"
+            
+            binary_path = binaries_dir / binary_pattern
+            if binary_path.exists():
+                return binary_path
+            
+            # Fallback: look for any binary with the base name
+            for binary_file in binaries_dir.glob(f"{executable_name}.*"):
+                if current_platform in binary_file.name:
+                    return binary_file
+            
+            return None
+            
+        except Exception as e:
+            logger.debug(f"Error finding package binary: {e}")
+            return None
 
 
 # Global desktop app instance
@@ -289,10 +434,25 @@ async def launch_desktop_app(test_mode: bool = False) -> DesktopApp:
     app = DesktopApp(test_mode=test_mode)
     
     if not app.is_available():
-        raise Exception(
-            "Desktop application not available. "
-            "Please ensure Rust and Tauri CLI are installed."
+        # Provide detailed error message and solutions
+        tauri_dir = Path(__file__).parent.parent.parent / "src-tauri"
+        
+        error_msg = (
+            "Desktop application not available.\n\n"
+            "Solutions:\n"
+            "1. 🌐 Use Web UI instead: mcp-sqlserver-filesystem test --web\n"
+            "2. 🔧 Install Rust toolchain:\n"
+            "   - Download and install Rust: https://rustup.rs/\n"
+            "   - Install Tauri CLI: cargo install tauri-cli\n"
+            "   - Then retry: mcp-sqlserver-filesystem test --desktop\n\n"
+            "3. 📦 For developers - Build desktop app:\n"
+            "   - python scripts/build_desktop.py install-deps\n"
+            "   - python scripts/build_desktop.py build-desktop-release\n\n"
+            "Note: The Web UI provides the same functionality without requiring Rust."
         )
+        
+        logger.error(error_msg)
+        raise Exception(error_msg)
     
     success = await app.launch()
     if not success:

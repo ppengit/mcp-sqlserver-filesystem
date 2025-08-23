@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mcp-sqlserver-filesystem"
-version = "0.1.4"
+version = "0.1.5"
 description = "Enhanced MCP server for SQL Server and filesystem access with dual interface support (Web UI and Desktop Application)"
 authors = [
     {name = "PJ", email = "peng.it@qq.com"}
@@ -81,12 +81,19 @@ Issues = "https://github.com/ppengit/mcp-sqlserver-filesystem/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/mcp_sqlserver_filesystem"]
+include = [
+    "/src/mcp_sqlserver_filesystem/desktop_binaries/*",
+]
 
 [tool.hatch.build.targets.sdist]
 include = [
     "/src",
     "/src-tauri",
     "/scripts",
+    "/README.md",
+    "/pyproject.toml",
+    "/src/mcp_sqlserver_filesystem/desktop_binaries",
+]
     "/tests",
     "/README.md",
     "/LICENSE",

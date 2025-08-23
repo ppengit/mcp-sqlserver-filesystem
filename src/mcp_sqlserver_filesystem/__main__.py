@@ -265,84 +265,45 @@ with open('config.json', 'r') as f:
 
 
 def test_desktop_app():
-    """测试桌面应用程序 (v0.1.0 新功能)"""
+    """测试桌面应用程序 (v0.1.4 增强功能)"""
     try:
-        print("🖥️ 测试桌面应用程序 (v0.1.0 新功能)")
+        print("🖥️ 测试桌面应用程序 (v0.1.4 增强功能)")
         print("=" * 50)
 
         print("🔧 检查桌面应用程序依赖...")
 
-        # 检查是否有 Tauri 桌面模块
+        # 尝试导入桌面应用程序模块
         try:
-            import os
-            import sys
-
-            # 尝试导入桌面应用程序模块
-            def import_desktop_app():
-                # 首先尝试从发布包位置导入
-                try:
-                    from .desktop_app import launch_desktop_app as desktop_func
-
-                    print("✅ 找到发布包中的桌面应用程序模块")
-                    return desktop_func
-                except ImportError:
-                    print("🔍 发布包中未找到桌面应用程序模块，尝试开发环境...")
-
-                # 回退到开发环境路径
-                tauri_python_path = os.path.join(
-                    os.path.dirname(__file__), "..", "..", "src-tauri", "python"
-                )
-                if os.path.exists(tauri_python_path):
-                    sys.path.insert(0, tauri_python_path)
-                    print(f"✅ 找到 Tauri Python 模块路径: {tauri_python_path}")
-                    try:
-                        from mcp_sqlserver_filesystem_desktop import (  # type: ignore
-                            launch_desktop_app as dev_func,
-                        )
-
-                        return dev_func
-                    except ImportError:
-                        print("❌ 无法从开发环境路径导入桌面应用程序模块")
-                        return None
-                else:
-                    print(f"⚠️  开发环境路径不存在: {tauri_python_path}")
-                    print("💡 这可能是 PyPI 安装的版本，桌面应用功能不可用")
-                    return None
-
-            launch_desktop_app_func = import_desktop_app()
-            if launch_desktop_app_func is None:
-                print("❌ 桌面应用程序不可用")
-                print()
-                print("💡 桌面应用程序功能说明：")
-                print("   桌面应用程序是一个计划中的功能，将提供：")
-                print("   • 原生桌面界面")
-                print("   • 离线数据库管理")
-                print("   • 文件系统浏览器")
-                print("   • 跨平台支持 (Windows/macOS/Linux)")
-                print()
-                print("🌐 目前可用的替代方案：")
-                print("   1. Web UI 模式：uvx mcp-sqlserver-filesystem@latest --test-web")
-                print("   2. 直接使用 MCP 服务器：uvx mcp-sqlserver-filesystem@latest")
-                print("   3. 在 Augment Code 中使用完整功能")
-                print()
-                print("📅 桌面应用程序将在未来版本中提供")
-                return True  # 改为返回True，因为这是预期行为
-
+            from .desktop_app import launch_desktop_app, is_desktop_app_available
             print("✅ 桌面应用程序模块导入成功")
-
         except ImportError as e:
             print(f"❌ 无法导入桌面应用程序模块: {e}")
-            print(
-                "💡 请确保已执行 'make build-desktop' 或 'python scripts/build_desktop.py'"
-            )
-            return False
+            print("🔄 自动回退到 Web UI 模式...")
+            return test_web_ui()
+
+        # 检查桌面应用是否可用
+        if not is_desktop_app_available():
+            print("⚠️  桌面应用程序环境不满足要求")
+            print("")
+            print("💡 需要的环境：")
+            print("   1. 🦀 Rust 工具链 (https://rustup.rs/)")
+            print("   2. 🔧 Tauri CLI (cargo install tauri-cli)")
+            print("   或者预编译的桌面应用程序")
+            print("")
+            print("🌐 自动启动 Web UI 替代方案...")
+            print("💡 Web UI 提供完全相同的功能，无需额外安装")
+            print("")
+            return test_web_ui()
 
         print("🚀 启动桌面应用程序...")
 
         # 设置桌面模式环境变量
+        import os
         os.environ["MCP_DESKTOP_MODE"] = "true"
 
         # 使用 asyncio 启动桌面应用程序
+        import sys
+        import asyncio
         if sys.platform == "win32":
             asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 
@@ -356,17 +317,17 @@ def test_desktop_app():
             manager = get_web_ui_manager()
 
             # 启动桌面应用并保存实例到 manager
-            app = loop.run_until_complete(launch_desktop_app_func(test_mode=True))
+            app = loop.run_until_complete(launch_desktop_app(test_mode=True))
             manager.desktop_app_instance = app
 
             print("✅ 桌面应用程序启动成功")
+            print("🖥️ 原生桌面窗口已打开")
             print("💡 桌面应用程序正在运行，按 Ctrl+C 停止...")
 
             # 保持应用程序运行
             try:
                 while True:
                     import time
-
                     time.sleep(1)
             except KeyboardInterrupt:
                 print("\n🛑 停止桌面应用程序...")
@@ -375,21 +336,18 @@ def test_desktop_app():
 
         except Exception as e:
             print(f"❌ 桌面应用程序启动失败: {e}")
-            import traceback
-
-            traceback.print_exc()
-            return False
+            print("🔄 自动回退到 Web UI 模式...")
+            return test_web_ui()
         finally:
             loop.close()
 
     except Exception as e:
         print(f"❌ 桌面应用程序测试失败: {e}")
-        import traceback
-
-        traceback.print_exc()
-        return False
+        print("🔄 自动回退到 Web UI 模式...")
+        return test_web_ui()
     finally:
         # 清理环境变量
+        import os
         os.environ.pop("MCP_DESKTOP_MODE", None)
 
 
