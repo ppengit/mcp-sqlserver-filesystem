@@ -73,23 +73,37 @@ class DatabaseConfig(BaseModel):
 class FilesystemConfig(BaseModel):
     """Filesystem access configuration."""
 
-    allowed_paths: List[str] = Field(default_factory=list, description="List of allowed base paths (empty = allow all)")
-    blocked_paths: List[str] = Field(default_factory=list, description="List of blocked paths (empty = block none)")
-    max_file_size: int = Field(1024 * 1024 * 1024, description="Maximum file size in bytes (1GB - increased for full access)")
-    allowed_extensions: Set[str] = Field(default_factory=set, description="Allowed file extensions (empty = allow all)")
-    blocked_extensions: Set[str] = Field(
-        default_factory=set,
-        description="Blocked file extensions (empty = block none - full access)"
-    )
+    allowed_paths: List[str] = Field(default_factory=list, description="List of allowed base paths (empty or ['*'] = allow all)")
+    max_file_size: int = Field(1024 * 1024 * 1024, description="Maximum file size in bytes (1GB)")
+    allowed_extensions: Set[str] = Field(default_factory=set, description="Allowed file extensions (empty or '*.*' = allow all)")
     enable_write: bool = Field(True, description="Enable write operations")
-    enable_delete: bool = Field(True, description="Enable delete operations (enabled for full access)")
+    enable_delete: bool = Field(True, description="Enable delete operations")
+    ignore_file_locks: bool = Field(True, description="Ignore file locks when reading/writing files")
     
-    @validator('allowed_paths', 'blocked_paths')
+    @property
+    def is_full_access_mode(self) -> bool:
+        """Check if filesystem is in full access mode (no path restrictions)."""
+        return not self.allowed_paths or '*' in self.allowed_paths or 'all' in [p.lower() for p in self.allowed_paths]
+    
+    @validator('allowed_paths')
     def validate_paths(cls, v):
         """Validate and normalize paths."""
+        if not v:
+            return v
+            
         normalized_paths = []
         for path in v:
+            path = path.strip()
+            if not path:
+                continue
+                
+            # Handle wildcards
+            if path in ['*', 'all', 'ALL']:
+                normalized_paths.append('*')
+                continue
+                
             try:
+                # Only resolve real paths, not wildcards
                 normalized_path = str(Path(path).resolve())
                 normalized_paths.append(normalized_path)
             except Exception as e:
@@ -171,16 +185,15 @@ class Config(BaseModel):
         
         # Filesystem configuration
         allowed_paths = os.getenv('FS_ALLOWED_PATHS', '').split(',') if os.getenv('FS_ALLOWED_PATHS') else []
-        blocked_paths = os.getenv('FS_BLOCKED_PATHS', '').split(',') if os.getenv('FS_BLOCKED_PATHS') else []
         allowed_extensions = set(os.getenv('FS_ALLOWED_EXTENSIONS', '').split(',')) if os.getenv('FS_ALLOWED_EXTENSIONS') else set()
         
         fs_config = FilesystemConfig(
             allowed_paths=[p.strip() for p in allowed_paths if p.strip()],
-            blocked_paths=[p.strip() for p in blocked_paths if p.strip()],
-            max_file_size=int(os.getenv('FS_MAX_FILE_SIZE', str(1024 * 1024 * 1024))),  # 1GB default for full access
+            max_file_size=int(os.getenv('FS_MAX_FILE_SIZE', str(1024 * 1024 * 1024))),  # 1GB default
             allowed_extensions=allowed_extensions,
             enable_write=os.getenv('FS_ENABLE_WRITE', 'true').lower() == 'true',
-            enable_delete=os.getenv('FS_ENABLE_DELETE', 'true').lower() == 'true',  # Enabled by default for full access
+            enable_delete=os.getenv('FS_ENABLE_DELETE', 'true').lower() == 'true',
+            ignore_file_locks=os.getenv('FS_IGNORE_FILE_LOCKS', 'true').lower() == 'true',
         )
         
         # Security configuration - defaults to full access
@@ -206,5 +219,24 @@ class Config(BaseModel):
         )
 
 
-# Global configuration instance
-config = Config.from_env()
+# Global configuration instance - can be reloaded
+_config_instance: Optional[Config] = None
+
+
+def get_config() -> Config:
+    """Get the current configuration instance, creating if necessary."""
+    global _config_instance
+    if _config_instance is None:
+        _config_instance = Config.from_env()
+    return _config_instance
+
+
+def reload_config() -> Config:
+    """Reload configuration from environment variables."""
+    global _config_instance
+    _config_instance = Config.from_env()
+    return _config_instance
+
+
+# For backward compatibility
+config = get_config()
