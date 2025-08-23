@@ -1,26 +1,26 @@
 [package]
 name = "mcp-sqlserver-filesystem"
-version = "0.2.0"
+version = "0.2.1"
 description = "Enhanced MCP server for SQL Server and filesystem access with dual interface support"
 authors = ["PJ <peng.it@qq.com>"]
 license = "MIT"
 repository = "https://github.com/ppengit/mcp-sqlserver-filesystem"
 default-run = "mcp-sqlserver-filesystem"
 edition = "2021"
-rust-version = "0.2.0"
+rust-version = "0.2.1"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [build-dependencies]
-tauri-build = { version = "0.2.0", features = [] }
+tauri-build = { version = "0.2.1", features = [] }
 
 [dependencies]
 serde_json = "1.0"
-serde = { version = "0.2.0", features = ["derive"] }
-tauri = { version = "0.2.0", features = ["api-all"] }
-tokio = { version = "0.2.0", features = ["full"] }
-reqwest = { version = "0.2.0", features = ["json"] }
-uuid = { version = "0.2.0", features = ["v4"] }
+serde = { version = "0.2.1", features = ["derive"] }
+tauri = { version = "0.2.1", features = ["api-all"] }
+tokio = { version = "0.2.1", features = ["full"] }
+reqwest = { version = "0.2.1", features = ["json"] }
+uuid = { version = "0.2.1", features = ["v4"] }
 
 [features]
 # this feature is used for production builds or when `devPath` points to the filesystem and the built-in dev server is disabled.

@@ -296,15 +296,15 @@ class WebUIManager:
     
     <script>
         // 简单的状态检查
-        setInterval(async () => {
-            try {
+        setInterval(async () => {{
+            try {{
                 const response = await fetch('/health');
                 const data = await response.json();
                 console.log('Health check:', data);
-            } catch (error) {
+            }} catch (error) {{
                 console.error('Health check failed:', error);
-            }
-        }, 30000); // 每30秒检查一次
+            }}
+        }}, 30000); // 每30秒检查一次
     </script>
 </body>
 </html>
