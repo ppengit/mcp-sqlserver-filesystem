@@ -137,7 +137,7 @@ class WebUIManager:
         """获取主页HTML"""
         from .. import __version__, __author__
         
-        return f"""
+        return """
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -145,105 +145,105 @@ class WebUIManager:
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MCP SQL Server Filesystem UI</title>
     <style>
-        body {
+        body {{
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             margin: 0;
             padding: 20px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             color: #333;
-        }
-        .container {
+        }}
+        .container {{
             max-width: 1200px;
             margin: 0 auto;
             background: white;
             border-radius: 10px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
             overflow: hidden;
-        }
-        .header {
+        }}
+        .header {{
             background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
             color: white;
             padding: 30px;
             text-align: center;
-        }
-        .header h1 {
+        }}
+        .header h1 {{
             margin: 0;
             font-size: 2.5em;
             font-weight: 300;
-        }
-        .header p {
+        }}
+        .header p {{
             margin: 10px 0 0 0;
             opacity: 0.9;
             font-size: 1.1em;
-        }
-        .content {
+        }}
+        .content {{
             padding: 40px;
-        }
-        .feature-grid {
+        }}
+        .feature-grid {{
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 30px;
             margin-top: 30px;
-        }
-        .feature-card {
+        }}
+        .feature-card {{
             background: #f8f9fa;
             border-radius: 8px;
             padding: 25px;
             border-left: 4px solid #4facfe;
             transition: transform 0.2s ease;
-        }
-        .feature-card:hover {
+        }}
+        .feature-card:hover {{
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        }
-        .feature-card h3 {
+        }}
+        .feature-card h3 {{
             margin: 0 0 15px 0;
             color: #2c3e50;
             font-size: 1.3em;
-        }
-        .feature-card p {
+        }}
+        .feature-card p {{
             margin: 0;
             color: #666;
             line-height: 1.6;
-        }
-        .status {
+        }}
+        .status {{
             background: #e8f5e8;
             border: 1px solid #4caf50;
             border-radius: 5px;
             padding: 15px;
             margin: 20px 0;
             text-align: center;
-        }
-        .status.running {
+        }}
+        .status.running {{
             background: #e8f5e8;
             border-color: #4caf50;
             color: #2e7d32;
-        }
-        .footer {
+        }}
+        .footer {{
             background: #2c3e50;
             color: white;
             padding: 20px;
             text-align: center;
             font-size: 0.9em;
-        }
-        .api-info {
+        }}
+        .api-info {{
             background: #fff3cd;
             border: 1px solid #ffeaa7;
             border-radius: 5px;
             padding: 15px;
             margin: 20px 0;
-        }
-        .api-info h4 {
+        }}
+        .api-info h4 {{
             margin: 0 0 10px 0;
             color: #856404;
-        }
-        .api-info code {
+        }}
+        .api-info code {{
             background: #f8f9fa;
             padding: 2px 6px;
             border-radius: 3px;
             font-family: 'Courier New', monospace;
-        }
+        }}
     </style>
 </head>
 <body>
@@ -284,13 +284,13 @@ class WebUIManager:
                 <h4>📡 API 端点</h4>
                 <p><strong>健康检查:</strong> <code>GET /health</code></p>
                 <p><strong>创建会话:</strong> <code>POST /api/sessions</code></p>
-                <p><strong>WebSocket:</strong> <code>WS /ws/{session_id}</code></p>
+                <p><strong>WebSocket:</strong> <code>WS /ws/{{session_id}}</code></p>
                 <p><strong>显示查询结果:</strong> <code>POST /api/query-results</code></p>
             </div>
         </div>
         
         <div class="footer">
-            <p>MCP SQL Server Filesystem v{__version__} | 作者: {__author__} | 基于 FastAPI 和 WebSocket</p>
+            <p>MCP SQL Server Filesystem v{version} | 作者: {author} | 基于 FastAPI 和 WebSocket</p>
         </div>
     </div>
     
@@ -308,7 +308,7 @@ class WebUIManager:
     </script>
 </body>
 </html>
-        """
+        """.format(version=__version__, author=__author__)
     
     async def _handle_websocket(self, websocket: WebSocket, session_id: str):
         """处理WebSocket连接"""
