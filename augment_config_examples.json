@@ -1,0 +1,166 @@
+﻿{
+  "开发模式配置": {
+    "description": "使用当前项目目录的开发模式配置",
+    "config": {
+      "mcpServers": {
+        "mcp-sqlserver-filesystem": {
+          "command": "python",
+          "args": ["-m", "mcp_sqlserver_filesystem"],
+          "cwd": "D:/Solution/jj-mcp",
+          "timeout": 600,
+          "env": {
+            "PYTHONPATH": "D:/Solution/jj-mcp/src",
+            "DB_SERVER": "localhost",
+            "DB_DATABASE": "master",
+            "DB_USE_WINDOWS_AUTH": "true",
+            "DB_TRUST_SERVER_CERTIFICATE": "true",
+            "DB_ENCRYPT": "false",
+            "DB_MULTIPLE_ACTIVE_RESULT_SETS": "true",
+            "MCP_DEBUG": "true",
+            "MCP_WEB_HOST": "127.0.0.1",
+            "MCP_WEB_PORT": "8765"
+          },
+          "autoApprove": [
+            "sql_query",
+            "list_tables",
+            "get_table_schema",
+            "read_file",
+            "list_directory"
+          ]
+        }
+      }
+    }
+  },
+  
+  "SQL Server认证配置": {
+    "description": "使用SQL Server用户名密码认证",
+    "config": {
+      "mcpServers": {
+        "mcp-sqlserver-filesystem": {
+          "command": "python",
+          "args": ["-m", "mcp_sqlserver_filesystem"],
+          "cwd": "D:/Solution/jj-mcp",
+          "timeout": 600,
+          "env": {
+            "PYTHONPATH": "D:/Solution/jj-mcp/src",
+            "DB_SERVER": "your-sql-server",
+            "DB_DATABASE": "your-database",
+            "DB_USE_WINDOWS_AUTH": "false",
+            "DB_USERNAME": "your-username",
+            "DB_PASSWORD": "your-password",
+            "DB_TRUST_SERVER_CERTIFICATE": "true",
+            "DB_ENCRYPT": "false",
+            "DB_MULTIPLE_ACTIVE_RESULT_SETS": "true",
+            "MCP_DEBUG": "true",
+            "MCP_WEB_HOST": "127.0.0.1",
+            "MCP_WEB_PORT": "8765"
+          },
+          "autoApprove": [
+            "sql_query",
+            "list_tables",
+            "get_table_schema"
+          ]
+        }
+      }
+    }
+  },
+  
+  "生产环境配置": {
+    "description": "生产环境安全配置",
+    "config": {
+      "mcpServers": {
+        "mcp-sqlserver-filesystem": {
+          "command": "python",
+          "args": ["-m", "mcp_sqlserver_filesystem"],
+          "cwd": "D:/Solution/jj-mcp",
+          "timeout": 600,
+          "env": {
+            "PYTHONPATH": "D:/Solution/jj-mcp/src",
+            "DB_SERVER": "prod-server.company.com",
+            "DB_DATABASE": "ProductionDB",
+            "DB_USE_WINDOWS_AUTH": "false",
+            "DB_USERNAME": "prod_user",
+            "DB_PASSWORD": "secure_password",
+            "DB_TRUST_SERVER_CERTIFICATE": "false",
+            "DB_ENCRYPT": "true",
+            "DB_MULTIPLE_ACTIVE_RESULT_SETS": "true",
+            "MCP_DEBUG": "false",
+            "MCP_WEB_HOST": "127.0.0.1",
+            "MCP_WEB_PORT": "8765"
+          },
+          "autoApprove": [
+            "sql_query",
+            "list_tables",
+            "get_table_schema"
+          ]
+        }
+      }
+    }
+  },
+  
+  "SSH Remote环境配置": {
+    "description": "SSH远程开发环境配置",
+    "config": {
+      "mcpServers": {
+        "mcp-sqlserver-filesystem": {
+          "command": "python",
+          "args": ["-m", "mcp_sqlserver_filesystem"],
+          "cwd": "/path/to/your/project",
+          "timeout": 600,
+          "env": {
+            "PYTHONPATH": "/path/to/your/project/src",
+            "DB_SERVER": "localhost",
+            "DB_DATABASE": "your_database",
+            "DB_USE_WINDOWS_AUTH": "true",
+            "DB_TRUST_SERVER_CERTIFICATE": "true",
+            "DB_ENCRYPT": "false",
+            "DB_MULTIPLE_ACTIVE_RESULT_SETS": "true",
+            "MCP_DEBUG": "true",
+            "MCP_WEB_HOST": "0.0.0.0",
+            "MCP_WEB_PORT": "8765"
+          },
+          "autoApprove": [
+            "sql_query",
+            "list_tables",
+            "get_table_schema",
+            "read_file",
+            "list_directory"
+          ]
+        }
+      }
+    }
+  },
+  
+  "桌面应用模式配置": {
+    "description": "启用桌面应用程序界面",
+    "config": {
+      "mcpServers": {
+        "mcp-sqlserver-filesystem": {
+          "command": "python",
+          "args": ["-m", "mcp_sqlserver_filesystem"],
+          "cwd": "D:/Solution/jj-mcp",
+          "timeout": 600,
+          "env": {
+            "PYTHONPATH": "D:/Solution/jj-mcp/src",
+            "DB_SERVER": "localhost",
+            "DB_DATABASE": "master",
+            "DB_USE_WINDOWS_AUTH": "true",
+            "DB_TRUST_SERVER_CERTIFICATE": "true",
+            "DB_ENCRYPT": "false",
+            "DB_MULTIPLE_ACTIVE_RESULT_SETS": "true",
+            "MCP_DEBUG": "true",
+            "MCP_DESKTOP_MODE": "true",
+            "MCP_WEB_PORT": "8765"
+          },
+          "autoApprove": [
+            "sql_query",
+            "list_tables",
+            "get_table_schema",
+            "read_file",
+            "list_directory"
+          ]
+        }
+      }
+    }
+  }
+}
