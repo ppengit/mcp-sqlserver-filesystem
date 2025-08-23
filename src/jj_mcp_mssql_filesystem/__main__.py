@@ -48,7 +48,7 @@ def main():
         "--web", action="store_true", help="测试 Web UI (自动持续运行)"
     )
     test_parser.add_argument(
-        "--desktop", action="store_true", help="测试桌面应用程序 (v0.1.0 新功能)"
+        "--desktop", action="store_true", help="启动桌面应用程序模式"
     )
     test_parser.add_argument(
         "--timeout", type=int, default=60, help="测试超时时间 (秒)"
@@ -57,26 +57,9 @@ def main():
     # 版本命令
     subparsers.add_parser("version", help="显示版本信息")
 
-    # 添加直接测试选项（类似参考项目的 uvx mcp-feedback-enhanced@latest test --desktop）
-    parser.add_argument(
-        "--test-web", action="store_true", help="快速测试 Web UI"
-    )
-    parser.add_argument(
-        "--test-desktop", action="store_true", help="快速测试桌面应用程序 (v0.1.0 新功能)"
-    )
-
     args = parser.parse_args()
 
-    # 处理直接测试选项（优先级最高）
-    if args.test_web:
-        print("🧪 快速测试 Web UI...")
-        test_args = argparse.Namespace(web=True, desktop=False, timeout=60)
-        run_tests(test_args)
-    elif args.test_desktop:
-        print("🖥️ 快速测试桌面应用程序...")
-        test_args = argparse.Namespace(web=False, desktop=True, timeout=60)
-        run_tests(test_args)
-    elif args.command == "test":
+    if args.command == "test":
         run_tests(args)
     elif args.command == "version":
         show_version()
@@ -265,11 +248,8 @@ with open('config.json', 'r') as f:
 
 
 def test_desktop_app():
-    """测试桌面应用程序 (v0.1.0 新功能)"""
+    """测试桌面应用程序"""
     try:
-        print("🖥️ 测试桌面应用程序 (v0.1.0 新功能)")
-        print("=" * 50)
-
         print("🔧 检查桌面应用程序依赖...")
 
         # 检查是否有 Tauri 桌面模块
