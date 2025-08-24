@@ -110,24 +110,35 @@ class DesktopLauncher:
             if not binaries_dir.exists():
                 return None
             
-            # 构建文件名模式
+            # 首先尝试简单的文件名（当前实际的文件名）
             if current_platform == "windows":
-                pattern = f"mcp-sqlserver-filesystem.exe.windows-{current_arch}"
+                simple_pattern = "mcp-sqlserver-filesystem.exe"
+                full_pattern = f"mcp-sqlserver-filesystem.exe.windows-{current_arch}"
             elif current_platform == "darwin":
-                pattern = f"mcp-sqlserver-filesystem.macos-{current_arch}"
+                simple_pattern = "mcp-sqlserver-filesystem"
+                full_pattern = f"mcp-sqlserver-filesystem.macos-{current_arch}"
             elif current_platform == "linux":
-                pattern = f"mcp-sqlserver-filesystem.linux-{current_arch}"
+                simple_pattern = "mcp-sqlserver-filesystem"
+                full_pattern = f"mcp-sqlserver-filesystem.linux-{current_arch}"
             else:
                 print(f"⚠️ 不支持的平台: {current_platform}")
                 return None
-            
-            binary_path = binaries_dir / pattern
-            if binary_path.exists():
-                return binary_path
-            
+
+            # 优先查找简单文件名
+            simple_path = binaries_dir / simple_pattern
+            if simple_path.exists():
+                print(f"✅ 找到简单命名的二进制文件: {simple_pattern}")
+                return simple_path
+
+            # 然后查找完整命名的文件
+            full_path = binaries_dir / full_pattern
+            if full_path.exists():
+                print(f"✅ 找到完整命名的二进制文件: {full_pattern}")
+                return full_path
+
             # 回退：查找任何匹配的二进制文件
             for file_path in binaries_dir.glob("mcp-sqlserver-filesystem*"):
-                if current_platform in file_path.name:
+                if current_platform in file_path.name or file_path.name == simple_pattern:
                     print(f"🔍 使用回退二进制文件: {file_path.name}")
                     return file_path
             

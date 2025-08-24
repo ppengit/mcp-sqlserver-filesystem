@@ -621,7 +621,7 @@ async def handle_list_directory(arguments: Dict[str, Any]) -> List[TextContent]:
 
 
 # UI interaction functions (will be implemented with Web UI)
-async def show_query_results_in_ui(query: str, results: List[Dict[str, Any]]) -> None:
+async def show_query_results_in_ui(query: str, results: Dict[str, Any]) -> None:
     """Show SQL query results in UI window."""
     try:
         # Import Web UI manager
@@ -631,7 +631,18 @@ async def show_query_results_in_ui(query: str, results: List[Dict[str, Any]]) ->
         if manager and manager.is_running():
             await manager.show_query_results(query, results)
         else:
-            logger.debug("Web UI not available for showing query results")
+            # 尝试启动UI来显示结果
+            logger.info("UI not running, attempting to start UI for query results...")
+            try:
+                # 尝试启动桌面应用
+                from .desktop_launcher import launch_desktop_app
+                success = launch_desktop_app(test_mode=False)
+                if success:
+                    logger.info("Desktop UI started successfully for query results")
+                else:
+                    logger.debug("Desktop UI failed to start, query results shown in text only")
+            except Exception as ui_start_error:
+                logger.debug(f"Could not start UI for query results: {ui_start_error}")
     except ImportError:
         logger.debug("Web UI module not available")
     except Exception as e:
