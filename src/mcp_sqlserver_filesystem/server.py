@@ -334,32 +334,36 @@ async def handle_sql_query(arguments: Dict[str, Any]) -> List[TextContent]:
         return [TextContent(type="text", text="❌ 数据库连接失败，请检查连接配置")]
 
     try:
-        results = db_manager.execute_query(query, parameters)
+        result_data = db_manager.execute_query(query, parameters)
+
+        # Extract rows from the result dictionary
+        rows = result_data.get('rows', [])
+        columns = result_data.get('columns', [])
+        row_count = result_data.get('row_count', 0)
 
         # Format results for display
-        if not results:
+        if row_count == 0:
             response_text = "Query executed successfully. No results returned."
         else:
             # Create a formatted table
-            if len(results) == 1:
+            if row_count == 1:
                 response_text = f"Query returned 1 row:\n\n"
             else:
-                response_text = f"Query returned {len(results)} rows:\n\n"
+                response_text = f"Query returned {row_count} rows:\n\n"
 
             # Add column headers
-            if results:
-                headers = list(results[0].keys())
-                response_text += " | ".join(headers) + "\n"
-                response_text += "-" * (len(" | ".join(headers))) + "\n"
+            if columns:
+                response_text += " | ".join(columns) + "\n"
+                response_text += "-" * (len(" | ".join(columns))) + "\n"
 
                 # Add data rows (limit to first 100 rows for display)
-                display_results = results[:100]
-                for row in display_results:
-                    row_values = [str(row.get(header, "")) for header in headers]
+                display_rows = rows[:100]
+                for row in display_rows:
+                    row_values = [str(row.get(col, "")) for col in columns]
                     response_text += " | ".join(row_values) + "\n"
 
-                if len(results) > 100:
-                    response_text += f"\n... and {len(results) - 100} more rows"
+                if row_count > 100:
+                    response_text += f"\n... and {row_count - 100} more rows"
 
         # Show in UI if requested
         if show_ui:
@@ -428,30 +432,36 @@ async def handle_get_table_schema(arguments: Dict[str, Any]) -> List[TextContent
     show_ui = arguments.get("show_ui", True)
 
     try:
-        schema_info = db_manager.get_table_schema(table_name, schema_name)
+        schema_data = db_manager.get_table_schema(table_name, schema_name)
 
-        if not schema_info:
+        # Extract columns from the schema data
+        columns = schema_data.get('columns', []) if isinstance(schema_data, dict) else []
+
+        if not columns:
             response_text = f"Table '{schema_name}.{table_name}' not found or has no columns."
         else:
             response_text = f"Schema for table '{schema_name}.{table_name}':\n\n"
             response_text += "Column Name | Data Type | Nullable | Default | Key\n"
             response_text += "-" * 50 + "\n"
 
-            for col in schema_info:
-                nullable = "YES" if col.get("is_nullable", True) else "NO"
-                default = col.get("column_default", "") or ""
-                key_type = ""
-                if col.get("is_primary_key"):
-                    key_type = "PK"
-                elif col.get("is_foreign_key"):
-                    key_type = "FK"
+            for col in columns:
+                # Handle different column name formats (uppercase from SQL Server)
+                column_name = col.get('COLUMN_NAME') or col.get('column_name', '')
+                data_type = col.get('DATA_TYPE') or col.get('data_type', '')
+                is_nullable = col.get('IS_NULLABLE') or col.get('is_nullable', 'YES')
+                column_default = col.get('COLUMN_DEFAULT') or col.get('column_default', '')
+                is_primary_key = col.get('IS_PRIMARY_KEY') or col.get('is_primary_key', 0)
 
-                response_text += f"{col['column_name']} | {col['data_type']} | {nullable} | {default} | {key_type}\n"
+                nullable = "YES" if is_nullable == 'YES' or is_nullable == True else "NO"
+                default = str(column_default) if column_default else ""
+                key_type = "PK" if is_primary_key else ""
+
+                response_text += f"{column_name} | {data_type} | {nullable} | {default} | {key_type}\n"
 
         # Show in UI if requested
         if show_ui:
             try:
-                await show_table_schema_in_ui(table_name, schema_name, schema_info)
+                await show_table_schema_in_ui(table_name, schema_name, columns)
             except Exception as ui_error:
                 logger.warning(f"Failed to show schema in UI: {ui_error}")
                 response_text += f"\n\nNote: Could not display in UI window: {ui_error}"
