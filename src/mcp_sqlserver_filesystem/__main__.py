@@ -90,9 +90,10 @@ def main():
 
 def run_server():
     """启动 MCP 服务器"""
+    import asyncio
     from .server import main as server_main
 
-    return server_main()
+    return asyncio.run(server_main())
 
 
 def run_tests(args):

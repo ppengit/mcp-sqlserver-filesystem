@@ -21,6 +21,7 @@ from mcp.types import (
 from .config import config
 from .database import db_manager, SQLSecurityError, DatabaseConnectionError
 from .filesystem import fs_manager, FilesystemSecurityError, FilesystemOperationError
+from . import __version__
 
 # Configure logging
 logging.basicConfig(
