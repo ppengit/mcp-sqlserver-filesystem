@@ -368,7 +368,7 @@ async def handle_sql_query(arguments: Dict[str, Any]) -> List[TextContent]:
         # Show in UI if requested
         if show_ui:
             try:
-                await show_query_results_in_ui(query, results)
+                await show_query_results_in_ui(query, result_data)
             except Exception as ui_error:
                 logger.warning(f"Failed to show results in UI: {ui_error}")
                 response_text += f"\n\nNote: Could not display in UI window: {ui_error}"
@@ -441,8 +441,8 @@ async def handle_get_table_schema(arguments: Dict[str, Any]) -> List[TextContent
             response_text = f"Table '{schema_name}.{table_name}' not found or has no columns."
         else:
             response_text = f"Schema for table '{schema_name}.{table_name}':\n\n"
-            response_text += "Column Name | Data Type | Nullable | Default | Key\n"
-            response_text += "-" * 50 + "\n"
+            response_text += "Column Name | Data Type | Nullable | Default | Key | Description\n"
+            response_text += "-" * 80 + "\n"
 
             for col in columns:
                 # Handle different column name formats (uppercase from SQL Server)
@@ -451,12 +451,14 @@ async def handle_get_table_schema(arguments: Dict[str, Any]) -> List[TextContent
                 is_nullable = col.get('IS_NULLABLE') or col.get('is_nullable', 'YES')
                 column_default = col.get('COLUMN_DEFAULT') or col.get('column_default', '')
                 is_primary_key = col.get('IS_PRIMARY_KEY') or col.get('is_primary_key', 0)
+                column_description = col.get('COLUMN_DESCRIPTION') or col.get('column_description', '')
 
                 nullable = "YES" if is_nullable == 'YES' or is_nullable == True else "NO"
                 default = str(column_default) if column_default else ""
                 key_type = "PK" if is_primary_key else ""
+                description = str(column_description) if column_description else ""
 
-                response_text += f"{column_name} | {data_type} | {nullable} | {default} | {key_type}\n"
+                response_text += f"{column_name} | {data_type} | {nullable} | {default} | {key_type} | {description}\n"
 
         # Show in UI if requested
         if show_ui:

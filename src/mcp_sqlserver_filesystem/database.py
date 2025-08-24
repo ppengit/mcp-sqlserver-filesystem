@@ -185,7 +185,7 @@ class SQLServerManager:
     def get_table_schema(self, table_name: str, schema_name: str = "dbo") -> Dict[str, Any]:
         """Get table schema information."""
         query = """
-        SELECT 
+        SELECT
             c.COLUMN_NAME,
             c.DATA_TYPE,
             c.IS_NULLABLE,
@@ -193,18 +193,22 @@ class SQLServerManager:
             c.CHARACTER_MAXIMUM_LENGTH,
             c.NUMERIC_PRECISION,
             c.NUMERIC_SCALE,
-            CASE WHEN pk.COLUMN_NAME IS NOT NULL THEN 1 ELSE 0 END AS IS_PRIMARY_KEY
+            CASE WHEN pk.COLUMN_NAME IS NOT NULL THEN 1 ELSE 0 END AS IS_PRIMARY_KEY,
+            ISNULL(ep.value, '') AS COLUMN_DESCRIPTION
         FROM INFORMATION_SCHEMA.COLUMNS c
         LEFT JOIN (
             SELECT ku.TABLE_CATALOG, ku.TABLE_SCHEMA, ku.TABLE_NAME, ku.COLUMN_NAME
             FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS AS tc
             INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE AS ku
-                ON tc.CONSTRAINT_TYPE = 'PRIMARY KEY' 
+                ON tc.CONSTRAINT_TYPE = 'PRIMARY KEY'
                 AND tc.CONSTRAINT_NAME = ku.CONSTRAINT_NAME
         ) pk ON c.TABLE_CATALOG = pk.TABLE_CATALOG
             AND c.TABLE_SCHEMA = pk.TABLE_SCHEMA
             AND c.TABLE_NAME = pk.TABLE_NAME
             AND c.COLUMN_NAME = pk.COLUMN_NAME
+        LEFT JOIN sys.extended_properties ep ON ep.major_id = OBJECT_ID(c.TABLE_SCHEMA + '.' + c.TABLE_NAME)
+            AND ep.minor_id = c.ORDINAL_POSITION
+            AND ep.name = 'MS_Description'
         WHERE c.TABLE_NAME = :table_name AND c.TABLE_SCHEMA = :schema_name
         ORDER BY c.ORDINAL_POSITION
         """
