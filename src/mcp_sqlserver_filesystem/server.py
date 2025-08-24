@@ -291,6 +291,20 @@ async def handle_list_tools() -> List[Tool]:
                 "required": ["dir_path"]
             }
         ),
+        Tool(
+            name="launch_desktop_ui",
+            description="强制启动桌面UI应用",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "test_mode": {
+                        "type": "boolean",
+                        "description": "是否以测试模式启动",
+                        "default": False
+                    }
+                }
+            }
+        ),
     ]
     
     return tools
@@ -314,6 +328,8 @@ async def handle_call_tool(name: str, arguments: Dict[str, Any]) -> List[TextCon
             return await handle_write_file(arguments)
         elif name == "list_directory":
             return await handle_list_directory(arguments)
+        elif name == "launch_desktop_ui":
+            return await handle_launch_desktop_ui(arguments)
         else:
             raise ValueError(f"Unknown tool: {name}")
     
@@ -368,6 +384,9 @@ async def handle_sql_query(arguments: Dict[str, Any]) -> List[TextContent]:
         # Show in UI if requested
         if show_ui:
             try:
+                # 强制启动桌面UI
+                logger.info("🚀 强制启动桌面UI来显示查询结果...")
+                await force_start_desktop_ui_for_query(query, result_data)
                 await show_query_results_in_ui(query, result_data)
             except Exception as ui_error:
                 logger.warning(f"Failed to show results in UI: {ui_error}")
@@ -621,6 +640,64 @@ async def handle_list_directory(arguments: Dict[str, Any]) -> List[TextContent]:
 
 
 # UI interaction functions (will be implemented with Web UI)
+async def force_start_desktop_ui_for_query(query: str, results: Dict[str, Any]) -> None:
+    """强制启动桌面UI来显示查询结果"""
+    try:
+        import subprocess
+        import sys
+        import os
+        from pathlib import Path
+
+        logger.info("🔍 尝试强制启动桌面UI...")
+
+        # 方法1：直接调用uvx命令启动桌面应用
+        try:
+            logger.info("方法1：使用uvx命令启动桌面应用...")
+            process = subprocess.Popen([
+                "uvx", "mcp-sqlserver-filesystem@0.3.2", "test", "--desktop"
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
+            cwd=os.getcwd()
+            )
+
+            # 不等待进程完成，让它在后台运行
+            logger.info("✅ 桌面应用启动命令已发送")
+            return
+
+        except Exception as e1:
+            logger.warning(f"方法1失败: {e1}")
+
+        # 方法2：直接执行二进制文件
+        try:
+            logger.info("方法2：直接执行预编译的二进制文件...")
+
+            # 查找二进制文件
+            current_dir = Path(__file__).parent
+            binary_path = current_dir / "desktop_binaries" / "mcp-sqlserver-filesystem.exe"
+
+            if binary_path.exists():
+                process = subprocess.Popen([
+                    str(binary_path)
+                ],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+                )
+                logger.info("✅ 直接启动二进制文件成功")
+                return
+            else:
+                logger.warning(f"二进制文件不存在: {binary_path}")
+
+        except Exception as e2:
+            logger.warning(f"方法2失败: {e2}")
+
+        logger.error("❌ 所有启动方法都失败了")
+
+    except Exception as e:
+        logger.error(f"❌ 强制启动桌面UI失败: {e}")
+
 async def show_query_results_in_ui(query: str, results: Dict[str, Any]) -> None:
     """Show SQL query results in UI window."""
     try:
@@ -750,6 +827,31 @@ async def main():
                 )
             )
         )
+
+
+async def handle_launch_desktop_ui(arguments: Dict[str, Any]) -> List[TextContent]:
+    """Handle desktop UI launch."""
+    test_mode = arguments.get("test_mode", False)
+
+    try:
+        logger.info(f"🚀 启动桌面UI，测试模式: {test_mode}")
+
+        # 使用强制启动方法
+        await force_start_desktop_ui_for_query("", {})
+
+        response_text = "✅ 桌面UI启动命令已发送！\n\n"
+        response_text += "如果桌面应用没有出现，可能的原因：\n"
+        response_text += "1. 防火墙或安全软件阻止了应用启动\n"
+        response_text += "2. 应用已经在后台运行\n"
+        response_text += "3. 系统权限限制\n\n"
+        response_text += "请检查任务管理器中是否有 'mcp-sqlserver-filesystem' 进程。"
+
+        return [TextContent(type="text", text=response_text)]
+
+    except Exception as e:
+        error_msg = f"❌ 桌面UI启动失败: {str(e)}"
+        logger.error(error_msg)
+        return [TextContent(type="text", text=error_msg)]
 
 
 if __name__ == "__main__":
