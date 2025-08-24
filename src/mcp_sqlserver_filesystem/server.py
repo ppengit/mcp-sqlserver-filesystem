@@ -16,6 +16,8 @@ from mcp.types import (
     ImageContent,
     EmbeddedResource,
     LoggingLevel,
+    ServerCapabilities,
+    ToolsCapability
 )
 
 from .config import config
@@ -689,9 +691,9 @@ async def main():
             InitializationOptions(
                 server_name="mcp-sqlserver-filesystem",
                 server_version=__version__,
-                capabilities=server.get_capabilities(
-                    notification_options=server.create_notification_options(),
-                    experimental_capabilities={}
+                capabilities=ServerCapabilities(
+                    tools=ToolsCapability(list_changed=True),
+                    experimental={}
                 )
             )
         )
