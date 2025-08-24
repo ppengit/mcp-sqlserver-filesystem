@@ -106,7 +106,7 @@ include = [
 # Desktop Application Configuration
 [tool.desktop]
 name = "MCP SQL Server Filesystem"
-version = "0.2.2"
+version = "0.2.3"
 identifier = "com.penjay.mcp-sqlserver-filesystem"
 author = "PJ"
 email = "peng.it@qq.com"
