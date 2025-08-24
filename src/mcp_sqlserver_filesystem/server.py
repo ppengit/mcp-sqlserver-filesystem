@@ -291,20 +291,7 @@ async def handle_list_tools() -> List[Tool]:
                 "required": ["dir_path"]
             }
         ),
-        Tool(
-            name="launch_desktop_ui",
-            description="强制启动桌面UI应用",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "test_mode": {
-                        "type": "boolean",
-                        "description": "是否以测试模式启动",
-                        "default": False
-                    }
-                }
-            }
-        ),
+
     ]
     
     return tools
@@ -328,8 +315,7 @@ async def handle_call_tool(name: str, arguments: Dict[str, Any]) -> List[TextCon
             return await handle_write_file(arguments)
         elif name == "list_directory":
             return await handle_list_directory(arguments)
-        elif name == "launch_desktop_ui":
-            return await handle_launch_desktop_ui(arguments)
+
         else:
             raise ValueError(f"Unknown tool: {name}")
     
@@ -381,16 +367,9 @@ async def handle_sql_query(arguments: Dict[str, Any]) -> List[TextContent]:
                 if row_count > 100:
                     response_text += f"\n... and {row_count - 100} more rows"
 
-        # Show in UI if requested
+        # Note: UI functionality has been removed for simplicity
         if show_ui:
-            try:
-                # 强制启动桌面UI
-                logger.info("🚀 强制启动桌面UI来显示查询结果...")
-                await force_start_desktop_ui_for_query(query, result_data)
-                await show_query_results_in_ui(query, result_data)
-            except Exception as ui_error:
-                logger.warning(f"Failed to show results in UI: {ui_error}")
-                response_text += f"\n\nNote: Could not display in UI window: {ui_error}"
+            logger.debug("UI display requested but UI functionality has been removed")
 
         return [TextContent(type="text", text=response_text)]
 
@@ -479,13 +458,9 @@ async def handle_get_table_schema(arguments: Dict[str, Any]) -> List[TextContent
 
                 response_text += f"{column_name} | {data_type} | {nullable} | {default} | {key_type} | {description}\n"
 
-        # Show in UI if requested
+        # Note: UI functionality has been removed for simplicity
         if show_ui:
-            try:
-                await show_table_schema_in_ui(table_name, schema_name, columns)
-            except Exception as ui_error:
-                logger.warning(f"Failed to show schema in UI: {ui_error}")
-                response_text += f"\n\nNote: Could not display in UI window: {ui_error}"
+            logger.debug("UI display requested but UI functionality has been removed")
 
         return [TextContent(type="text", text=response_text)]
 
@@ -623,13 +598,9 @@ async def handle_list_directory(arguments: Dict[str, Any]) -> List[TextContent]:
 
                 response_text += f"{item_type} | {name} | {size} | {modified}\n"
 
-        # Show in UI if requested
+        # Note: UI functionality has been removed for simplicity
         if show_ui:
-            try:
-                await show_directory_listing_in_ui(dir_path, items, recursive)
-            except Exception as ui_error:
-                logger.warning(f"Failed to show directory listing in UI: {ui_error}")
-                response_text += f"\n\nNote: Could not display in UI window: {ui_error}"
+            logger.debug("UI display requested but UI functionality has been removed")
 
         return [TextContent(type="text", text=response_text)]
 
@@ -639,170 +610,14 @@ async def handle_list_directory(arguments: Dict[str, Any]) -> List[TextContent]:
         return [TextContent(type="text", text=error_msg)]
 
 
-# UI interaction functions (will be implemented with Web UI)
-async def force_start_desktop_ui_for_query(query: str, results: Dict[str, Any]) -> None:
-    """强制启动桌面UI来显示查询结果"""
-    try:
-        import subprocess
-        import sys
-        import os
-        from pathlib import Path
-
-        logger.info("🔍 尝试强制启动桌面UI...")
-
-        # 方法1：直接调用uvx命令启动桌面应用
-        try:
-            logger.info("方法1：使用uvx命令启动桌面应用...")
-            process = subprocess.Popen([
-                "uvx", "mcp-sqlserver-filesystem@0.3.2", "test", "--desktop"
-            ],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
-            cwd=os.getcwd()
-            )
-
-            # 不等待进程完成，让它在后台运行
-            logger.info("✅ 桌面应用启动命令已发送")
-            return
-
-        except Exception as e1:
-            logger.warning(f"方法1失败: {e1}")
-
-        # 方法2：直接执行二进制文件
-        try:
-            logger.info("方法2：直接执行预编译的二进制文件...")
-
-            # 查找二进制文件
-            current_dir = Path(__file__).parent
-            binary_path = current_dir / "desktop_binaries" / "mcp-sqlserver-filesystem.exe"
-
-            if binary_path.exists():
-                process = subprocess.Popen([
-                    str(binary_path)
-                ],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
-                )
-                logger.info("✅ 直接启动二进制文件成功")
-                return
-            else:
-                logger.warning(f"二进制文件不存在: {binary_path}")
-
-        except Exception as e2:
-            logger.warning(f"方法2失败: {e2}")
-
-        logger.error("❌ 所有启动方法都失败了")
-
-    except Exception as e:
-        logger.error(f"❌ 强制启动桌面UI失败: {e}")
-
-async def show_query_results_in_ui(query: str, results: Dict[str, Any]) -> None:
-    """Show SQL query results in UI window."""
-    try:
-        # Import Web UI manager
-        from .web.main import get_web_ui_manager
-
-        manager = get_web_ui_manager()
-        if manager and manager.is_running():
-            await manager.show_query_results(query, results)
-        else:
-            # 尝试启动UI来显示结果
-            logger.info("UI not running, attempting to start UI for query results...")
-            try:
-                # 尝试启动桌面应用
-                from .desktop_launcher import launch_desktop_app
-                logger.info("Calling launch_desktop_app(test_mode=False)...")
-                success = launch_desktop_app(test_mode=False)
-                if success:
-                    logger.info("✅ Desktop UI started successfully for query results")
-                    # 等待一下让UI启动
-                    import asyncio
-                    await asyncio.sleep(2)
-                    # 尝试再次发送数据到UI
-                    try:
-                        manager = get_web_ui_manager()
-                        if manager and manager.is_running():
-                            await manager.show_query_results(query, results)
-                    except:
-                        pass
-                else:
-                    logger.warning("❌ Desktop UI failed to start, query results shown in text only")
-            except Exception as ui_start_error:
-                logger.error(f"❌ Could not start UI for query results: {ui_start_error}")
-                import traceback
-                logger.error(f"Full traceback: {traceback.format_exc()}")
-    except ImportError:
-        logger.debug("Web UI module not available")
-    except Exception as e:
-        logger.warning(f"Failed to show query results in UI: {e}")
-
-
-async def show_table_schema_in_ui(table_name: str, schema_name: str, schema_info: List[Dict[str, Any]]) -> None:
-    """Show table schema in UI window."""
-    try:
-        from .web.main import get_web_ui_manager
-
-        manager = get_web_ui_manager()
-        if manager and manager.is_running():
-            await manager.show_table_schema(table_name, schema_name, schema_info)
-        else:
-            logger.debug("Web UI not available for showing table schema")
-    except ImportError:
-        logger.debug("Web UI module not available")
-    except Exception as e:
-        logger.warning(f"Failed to show table schema in UI: {e}")
-
-
-async def show_tables_list_in_ui(schema_name: str, tables: List[str]) -> None:
-    """Show tables list in UI window."""
-    try:
-        from .web.main import get_web_ui_manager
-
-        manager = get_web_ui_manager()
-        if manager and manager.is_running():
-            await manager.show_tables_list(schema_name, tables)
-        else:
-            logger.debug("Web UI not available for showing tables list")
-    except ImportError:
-        logger.debug("Web UI module not available")
-    except Exception as e:
-        logger.warning(f"Failed to show tables list in UI: {e}")
-
-
-# 文件操作不需要UI显示，已移除相关函数
-
-
-async def show_directory_listing_in_ui(dir_path: str, items: List[Dict[str, Any]], recursive: bool) -> None:
-    """Show directory listing in UI window."""
-    try:
-        from .web.main import get_web_ui_manager
-
-        manager = get_web_ui_manager()
-        if manager and manager.is_running():
-            await manager.show_directory_listing(dir_path, items, recursive)
-        else:
-            logger.debug("Web UI not available for showing directory listing")
-    except ImportError:
-        logger.debug("Web UI module not available")
-    except Exception as e:
-        logger.warning(f"Failed to show directory listing in UI: {e}")
+# UI functionality has been removed for simplicity and reliability
 
 
 async def main():
     """Main entry point for the MCP server."""
     logger.info("Starting MCP SQL Server Filesystem server...")
 
-    # Initialize Web UI manager if available
-    try:
-        from .web.main import get_web_ui_manager
-        ui_manager = get_web_ui_manager()
-        logger.info("Web UI manager initialized")
-    except ImportError:
-        logger.info("Web UI not available - running in console mode only")
-    except Exception as e:
-        logger.warning(f"Failed to initialize Web UI: {e}")
+    # UI functionality has been removed for simplicity
 
     # Test database connection on startup (non-blocking)
     try:
@@ -829,29 +644,7 @@ async def main():
         )
 
 
-async def handle_launch_desktop_ui(arguments: Dict[str, Any]) -> List[TextContent]:
-    """Handle desktop UI launch."""
-    test_mode = arguments.get("test_mode", False)
-
-    try:
-        logger.info(f"🚀 启动桌面UI，测试模式: {test_mode}")
-
-        # 使用强制启动方法
-        await force_start_desktop_ui_for_query("", {})
-
-        response_text = "✅ 桌面UI启动命令已发送！\n\n"
-        response_text += "如果桌面应用没有出现，可能的原因：\n"
-        response_text += "1. 防火墙或安全软件阻止了应用启动\n"
-        response_text += "2. 应用已经在后台运行\n"
-        response_text += "3. 系统权限限制\n\n"
-        response_text += "请检查任务管理器中是否有 'mcp-sqlserver-filesystem' 进程。"
-
-        return [TextContent(type="text", text=response_text)]
-
-    except Exception as e:
-        error_msg = f"❌ 桌面UI启动失败: {str(e)}"
-        logger.error(error_msg)
-        return [TextContent(type="text", text=error_msg)]
+# UI functionality has been removed
 
 
 if __name__ == "__main__":
