@@ -672,14 +672,14 @@ async def main():
     except Exception as e:
         logger.warning(f"Failed to initialize Web UI: {e}")
 
-    # Test database connection on startup
+    # Test database connection on startup (non-blocking)
     try:
         if db_manager.test_connection():
             logger.info("Database connection test successful")
         else:
-            logger.warning("Database connection test failed")
+            logger.warning("Database connection test failed - database tools will be unavailable")
     except Exception as e:
-        logger.error(f"Database connection test error: {e}")
+        logger.warning(f"Database connection test error: {e} - database tools will be unavailable")
 
     # Run the server
     async with stdio_server() as (read_stream, write_stream):
@@ -690,7 +690,7 @@ async def main():
                 server_name="mcp-sqlserver-filesystem",
                 server_version=__version__,
                 capabilities=server.get_capabilities(
-                    notification_options=None,
+                    notification_options=server.create_notification_options(),
                     experimental_capabilities={}
                 )
             )
