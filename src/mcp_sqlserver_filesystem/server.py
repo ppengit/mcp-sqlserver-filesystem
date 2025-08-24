@@ -638,39 +638,7 @@ async def show_tables_list_in_ui(schema_name: str, tables: List[str]) -> None:
         logger.warning(f"Failed to show tables list in UI: {e}")
 
 
-async def show_file_content_in_ui(file_path: str, content: str) -> None:
-    """Show file content in UI window."""
-    try:
-        from .web.main import get_web_ui_manager
-
-        manager = get_web_ui_manager()
-        if manager and manager.is_running():
-            await manager.show_file_content(file_path, content)
-        else:
-            logger.debug("Web UI not available for showing file content")
-    except ImportError:
-        logger.debug("Web UI module not available")
-    except Exception as e:
-        logger.warning(f"Failed to show file content in UI: {e}")
-
-
-async def show_file_write_confirmation_ui(file_path: str, content_length: int) -> bool:
-    """Show file write confirmation dialog in UI."""
-    try:
-        from .web.main import get_web_ui_manager
-
-        manager = get_web_ui_manager()
-        if manager and manager.is_running():
-            return await manager.show_file_write_confirmation(file_path, content_length)
-        else:
-            logger.debug("Web UI not available for file write confirmation")
-            return True  # Default to allow if UI not available
-    except ImportError:
-        logger.debug("Web UI module not available")
-        return True
-    except Exception as e:
-        logger.warning(f"Failed to show file write confirmation in UI: {e}")
-        return True
+# 文件操作不需要UI显示，已移除相关函数
 
 
 async def show_directory_listing_in_ui(dir_path: str, items: List[Dict[str, Any]], recursive: bool) -> None:

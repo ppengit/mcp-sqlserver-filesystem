@@ -453,19 +453,7 @@ class WebUIManager:
         await self._broadcast_to_websockets(message)
         ui_debug_log(f"Broadcasted tables list for schema {schema_name}: {len(tables)} tables")
     
-    async def show_file_content(self, file_path: str, content: str):
-        """显示文件内容"""
-        message = {
-            "type": "file_content",
-            "data": {
-                "file_path": file_path,
-                "content": content,
-                "timestamp": time.time(),
-            }
-        }
-        
-        await self._broadcast_to_websockets(message)
-        ui_debug_log(f"Broadcasted file content for {file_path}")
+    # 文件操作不需要UI显示，已移除 show_file_content 方法
     
     async def show_file_write_confirmation(self, file_path: str, content_length: int) -> bool:
         """显示文件写入确认对话框"""

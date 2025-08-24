@@ -118,14 +118,10 @@ fn main() {
             open_external_url
         ])
         .setup(|app| {
-            let window = app.get_window("main").unwrap();
-
-            // 自动启动Python服务器
-            let state = app.state::<ServerState>().clone();
-            let window_clone = window.clone();
+            let _window = app.get_window("main").unwrap();
 
             tauri::async_runtime::spawn(async move {
-                // 简化的启动逻辑，避免生命周期问题
+                // 桌面应用启动成功
                 println!("Desktop app started successfully");
             });
 
