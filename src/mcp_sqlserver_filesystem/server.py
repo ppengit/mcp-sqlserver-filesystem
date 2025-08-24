@@ -329,6 +329,10 @@ async def handle_sql_query(arguments: Dict[str, Any]) -> List[TextContent]:
     parameters = arguments.get("parameters", {})
     show_ui = arguments.get("show_ui", True)
 
+    # 首先检查数据库连接
+    if not db_manager.test_connection():
+        return [TextContent(type="text", text="❌ 数据库连接失败，请检查连接配置")]
+
     try:
         results = db_manager.execute_query(query, parameters)
 
@@ -369,8 +373,21 @@ async def handle_sql_query(arguments: Dict[str, Any]) -> List[TextContent]:
 
     except Exception as e:
         error_msg = f"SQL query failed: {str(e)}"
-        logger.error(error_msg)
-        return [TextContent(type="text", text=error_msg)]
+        error_type = type(e).__name__
+        detailed_error = f"SQL query failed: [{error_type}] {str(e)}"
+
+        # 提供更详细的错误信息
+        if "login failed" in str(e).lower():
+            detailed_error += "\n💡 建议：检查数据库用户名和密码"
+        elif "cannot open database" in str(e).lower():
+            detailed_error += "\n💡 建议：检查数据库名称是否正确，或尝试使用 'master' 数据库"
+        elif "permission" in str(e).lower() or "access denied" in str(e).lower():
+            detailed_error += "\n💡 建议：检查数据库用户是否有SELECT权限"
+        elif str(e) == "0" or str(e) == "":
+            detailed_error = f"SQL query failed: 未知错误 (可能是连接或权限问题)\n💡 建议：检查数据库连接配置和用户权限"
+
+        logger.error(detailed_error)
+        return [TextContent(type="text", text=detailed_error)]
 
 
 async def handle_sql_execute(arguments: Dict[str, Any]) -> List[TextContent]:

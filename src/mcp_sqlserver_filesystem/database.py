@@ -149,8 +149,15 @@ class SQLServerManager:
                 }
                 
         except Exception as e:
-            logger.error(f"Query execution failed: {e}")
-            raise
+            error_type = type(e).__name__
+            error_msg = f"Query execution failed: [{error_type}] {str(e)}"
+            logger.error(error_msg)
+
+            # 提供更具体的错误信息
+            if hasattr(e, 'args') and e.args:
+                logger.error(f"Error details: {e.args}")
+
+            raise e
     
     def execute_non_query(self, query: str, parameters: Optional[Dict[str, Any]] = None) -> int:
         """Execute an INSERT, UPDATE, or DELETE query and return affected rows count."""
