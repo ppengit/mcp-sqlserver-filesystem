@@ -1,0 +1,40 @@
+name: Build Desktop Application (Simplified)
+
+# 此工作流已简化，参考 mcp-feedback-enhanced 的方式
+# 使用本地构建脚本而不是 GitHub Actions 自动构建
+# 预编译的二进制文件通过手动构建后包含在 PyPI 包中
+
+on:
+  workflow_dispatch:
+    inputs:
+      info_only:
+        description: 'Show information only'
+        required: false
+        default: 'true'
+        type: boolean
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # 提供构建信息，而不是实际构建
+  information:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Information
+        run: |
+          echo "🚧 此工作流已简化，参考 mcp-feedback-enhanced 项目:"
+          echo ""
+          echo "📋 构建方式已改为参考 mcp-feedback-enhanced 项目:"
+          echo "   1. 使用本地构建脚本 scripts/build_desktop.py"
+          echo "   2. 手动构建多平台二进制文件"
+          echo "   3. 将二进制文件包含在 PyPI 包中"
+          echo "   4. 运行时智能检测并使用预编译二进制"
+          echo ""
+          echo "🔧 要构建桌面应用，请在本地运行:"
+          echo "   python scripts/build_desktop.py --release"
+          echo ""
+          echo "💡 完整的多平台支持将在后续版本中实现"
+          echo "🎯 当前重点是确保 Web UI 和智能回退机制正常工作"
+          echo ""
+          echo "📂 参考项目: https://github.com/Minidoracat/mcp-feedback-enhanced"
