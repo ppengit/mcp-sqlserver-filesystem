@@ -12,14 +12,14 @@
 
 - 🗄️ **Complete SQL Server Support** - Execute all SQL commands with detailed operation tracking
 - 📁 **Full Filesystem Access** - Read/write files with advanced security controls
-- 🌐 **Web UI Interface** - Real-time query results display with modern responsive design  
-- 🖥️ **Desktop Application** - Cross-platform native desktop app with intelligent fallback to Web UI
+- 🌐 **SQL Results Display UI** - Pure display interface for SQL query results with modern responsive design
+- 🖥️ **Desktop Application** - Cross-platform native desktop app for SQL results visualization
 - 🔍 **Smart Environment Detection** - Auto-adapts to SSH Remote, WSL, Local environments
 - 🔐 **Enhanced Connection Parameters** - Built-in support for `TrustServerCertificate=true`, `Encrypt=false`, `MultipleActiveResultSets=true`
-- ⚡ **Dual Interface Architecture** - Choose between Web UI and native desktop experience
-- 🎨 **Modern UI Design** - Responsive design with professional styling
-- 🔄 **Real-time Communication** - WebSocket-based live updates
-- 📊 **Detailed Operation Tracking** - INSERT/UPDATE/DELETE operations show affected records
+- ⚡ **Display-Only Architecture** - UI shows SQL results automatically, no user interaction required
+- 🎨 **Clean Results Display** - Professional table formatting for SQL query results and schema information
+- 🔄 **Real-time Updates** - WebSocket-based automatic display when AI assistant executes SQL queries
+- 📊 **Detailed Operation Results** - Shows affected records count and execution details for all SQL operations
 
 ### 🚀 Quick Start
 
@@ -33,15 +33,17 @@ pip install uv
 uvx mcp-sqlserver-filesystem@latest
 ```
 
-#### 🧪 Testing Both Interfaces
+#### 🧪 Testing SQL Results Display
 
 ```bash
-# Test Web UI (browser-based interface)
+# Test Web UI (browser-based SQL results display)
 uvx mcp-sqlserver-filesystem@latest --test-web
 
-# Test Desktop Application (native app with auto-fallback)
+# Test Desktop Application (native SQL results display with auto-fallback)
 uvx mcp-sqlserver-filesystem@latest --test-desktop
 ```
+
+> **Note**: The UI is designed for displaying SQL query results only. File operations are performed in the background and do not require UI interaction.
 
 ### 🖥️ Desktop Application
 
@@ -301,14 +303,14 @@ python -m mcp_sqlserver_filesystem --test-web
 
 - 🗄️ **完整SQL Server支持** - 执行所有SQL命令，详细跟踪操作记录
 - 📁 **全面文件系统访问** - 读写文件，支持高级安全控制
-- 🌐 **Web UI界面** - 实时查询结果显示，现代响应式设计
-- 🖥️ **桌面应用程序** - 跨平台原生桌面应用，智能回退到Web UI
+- 🌐 **SQL结果显示界面** - 专门用于显示SQL查询结果的纯展示界面，现代响应式设计
+- 🖥️ **桌面应用程序** - 跨平台原生桌面应用，用于SQL结果可视化展示
 - 🔍 **智能环境检测** - 自动适配SSH远程、WSL、本地环境
 - 🔐 **增强连接参数** - 内置支持`TrustServerCertificate=true`、`Encrypt=false`、`MultipleActiveResultSets=true`
-- ⚡ **双界面架构** - 在Web UI和原生桌面体验之间选择
-- 🎨 **现代UI设计** - 响应式设计，专业样式
-- 🔄 **实时通信** - 基于WebSocket的实时更新
-- 📊 **详细操作跟踪** - INSERT/UPDATE/DELETE操作显示受影响的具体记录
+- ⚡ **纯显示架构** - UI自动显示SQL结果，无需用户交互操作
+- 🎨 **清晰结果展示** - 专业的表格格式显示SQL查询结果和表结构信息
+- 🔄 **实时自动更新** - 当AI助手执行SQL查询时，通过WebSocket自动显示结果
+- 📊 **详细操作结果** - 显示所有SQL操作的受影响记录数和执行详情
 
 ### 🚀 快速开始
 
@@ -322,15 +324,17 @@ pip install uv
 uvx mcp-sqlserver-filesystem@latest
 ```
 
-#### 🧪 测试两种界面
+#### 🧪 测试SQL结果显示
 
 ```bash
-# 测试Web UI（基于浏览器的界面）
+# 测试Web UI（基于浏览器的SQL结果显示）
 uvx mcp-sqlserver-filesystem@latest --test-web
 
-# 测试桌面应用（原生应用，自动回退）
+# 测试桌面应用（原生SQL结果显示，自动回退）
 uvx mcp-sqlserver-filesystem@latest --test-desktop
 ```
+
+> **注意**：UI专门用于显示SQL查询结果。文件操作在后台执行，不需要UI交互。
 
 ### 🖥️ 桌面应用
 

@@ -4,7 +4,7 @@
     "beforeBuildCommand": "",
     "devPath": "../src/mcp_sqlserver_filesystem/web/static",
     "distDir": "../src/mcp_sqlserver_filesystem/web/static",
-    "withGlobalTauri": false
+    "withGlobalTauri": true
   },
   "package": {
     "productName": "MCP SQL Server Filesystem",
@@ -66,20 +66,17 @@
       ],
       "resources": [],
       "externalBin": [],
-      "copyright": "",
-      "category": "Developer Tool",
-      "shortDescription": "",
-      "longDescription": "",
+      "copyright": "Copyright © 2024 penjay",
+      "category": "DeveloperTool",
+      "shortDescription": "MCP SQL Server Filesystem - Database and file operations for AI assistants",
+      "longDescription": "An MCP server that provides SQL Server database operations and filesystem access for AI-assisted development, featuring Web UI with intelligent environment detection.",
       "deb": {
         "depends": []
       },
       "macOS": {
         "frameworks": [],
-        "minimumSystemVersion": "",
-        "exceptionDomain": "",
-        "signingIdentity": null,
-        "providerShortName": null,
-        "entitlements": null
+        "minimumSystemVersion": "10.13",
+        "exceptionDomain": ""
       },
       "windows": {
         "certificateThumbprint": null,
@@ -88,7 +85,7 @@
       }
     },
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' ws: wss: http: https:; font-src 'self' data:;"
     },
     "windows": [
       {
@@ -98,7 +95,11 @@
         "width": 1200,
         "height": 800,
         "minWidth": 800,
-        "minHeight": 600
+        "minHeight": 600,
+        "center": true,
+        "decorations": true,
+        "alwaysOnTop": false,
+        "skipTaskbar": false
       }
     ]
   }
