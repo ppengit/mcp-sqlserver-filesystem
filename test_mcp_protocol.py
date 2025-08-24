@@ -152,7 +152,7 @@ async def main():
     print()
     
     # 测试2: MCP协议
-    success2 = await test_mcp_protocol()
+    success2 = await test_mcp_server()
     print()
     
     if success1 and success2:
