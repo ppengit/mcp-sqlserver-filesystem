@@ -636,13 +636,26 @@ async def show_query_results_in_ui(query: str, results: Dict[str, Any]) -> None:
             try:
                 # 尝试启动桌面应用
                 from .desktop_launcher import launch_desktop_app
+                logger.info("Calling launch_desktop_app(test_mode=False)...")
                 success = launch_desktop_app(test_mode=False)
                 if success:
-                    logger.info("Desktop UI started successfully for query results")
+                    logger.info("✅ Desktop UI started successfully for query results")
+                    # 等待一下让UI启动
+                    import asyncio
+                    await asyncio.sleep(2)
+                    # 尝试再次发送数据到UI
+                    try:
+                        manager = get_web_ui_manager()
+                        if manager and manager.is_running():
+                            await manager.show_query_results(query, results)
+                    except:
+                        pass
                 else:
-                    logger.debug("Desktop UI failed to start, query results shown in text only")
+                    logger.warning("❌ Desktop UI failed to start, query results shown in text only")
             except Exception as ui_start_error:
-                logger.debug(f"Could not start UI for query results: {ui_start_error}")
+                logger.error(f"❌ Could not start UI for query results: {ui_start_error}")
+                import traceback
+                logger.error(f"Full traceback: {traceback.format_exc()}")
     except ImportError:
         logger.debug("Web UI module not available")
     except Exception as e:

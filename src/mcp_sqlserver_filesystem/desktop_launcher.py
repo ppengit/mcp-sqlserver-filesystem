@@ -84,7 +84,24 @@ class DesktopLauncher:
                     raise Exception(f"桌面应用启动失败: {error_msg}")
                     
             else:
-                subprocess.run([str(executable_path)])
+                # 非测试模式：后台启动桌面应用
+                self.process = subprocess.Popen(
+                    [str(executable_path)],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+                )
+
+                # 等待应用启动
+                import time
+                time.sleep(2)
+
+                if self.process.poll() is not None:
+                    stdout, stderr = self.process.communicate()
+                    error_msg = stderr.decode() if stderr else "Unknown error"
+                    raise Exception(f"桌面应用启动失败: {error_msg}")
+
+                print("✅ 桌面应用已在后台启动")
                 
             return True
             
