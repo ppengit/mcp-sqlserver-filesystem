@@ -115,11 +115,15 @@ async def handle_read_resource(uri: str) -> str:
 @server.list_tools()
 async def handle_list_tools() -> List[Tool]:
     """List available tools."""
-    tools = [
-        # Database tools
-        Tool(
+    tools = []
+
+    # Add database tools only if database is available
+    if db_manager.is_available():
+        tools.extend([
+            # Database tools
+            Tool(
             name="sql_query",
-            description="Execute SQL SELECT query and display results in UI window",
+            description="Execute SQL SELECT query and return results",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -132,11 +136,7 @@ async def handle_list_tools() -> List[Tool]:
                         "description": "Query parameters (optional)",
                         "additionalProperties": True
                     },
-                    "show_ui": {
-                        "type": "boolean",
-                        "description": "Show results in UI window",
-                        "default": True
-                    }
+
                 },
                 "required": ["query"]
             }
@@ -156,18 +156,14 @@ async def handle_list_tools() -> List[Tool]:
                         "description": "Query parameters (optional)",
                         "additionalProperties": True
                     },
-                    "confirm_ui": {
-                        "type": "boolean",
-                        "description": "Show confirmation dialog in UI",
-                        "default": True
-                    }
+
                 },
                 "required": ["query"]
             }
         ),
         Tool(
             name="get_table_schema",
-            description="Get table schema information and display in UI",
+            description="Get table schema information",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -180,18 +176,14 @@ async def handle_list_tools() -> List[Tool]:
                         "description": "Schema name (default: dbo)",
                         "default": "dbo"
                     },
-                    "show_ui": {
-                        "type": "boolean",
-                        "description": "Show schema in UI window",
-                        "default": True
-                    }
+
                 },
                 "required": ["table_name"]
             }
         ),
         Tool(
             name="list_tables",
-            description="List all tables in database and display in UI",
+            description="List all tables in database",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -200,19 +192,40 @@ async def handle_list_tools() -> List[Tool]:
                         "description": "Schema name (default: dbo)",
                         "default": "dbo"
                     },
-                    "show_ui": {
-                        "type": "boolean",
-                        "description": "Show tables in UI window",
-                        "default": True
-                    }
+
                 }
             }
+        )])
+
+    # Always add database management tools
+    tools.extend([
+        # Database management tools
+        Tool(
+            name="database_reconnect",
+            description="Attempt to reconnect to the database",
+            inputSchema={
+                "type": "object",
+                "properties": {},
+                "additionalProperties": False
+            }
         ),
-        
+        Tool(
+            name="database_status",
+            description="Check database connection status",
+            inputSchema={
+                "type": "object",
+                "properties": {},
+                "additionalProperties": False
+            }
+        ),
+    ])
+
+    # Always add filesystem tools (they don't depend on database)
+    tools.extend([
         # Filesystem tools
         Tool(
             name="read_file",
-            description="Read file content and optionally display in UI",
+            description="Read file content",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -225,18 +238,14 @@ async def handle_list_tools() -> List[Tool]:
                         "description": "File encoding (default: utf-8)",
                         "default": "utf-8"
                     },
-                    "show_ui": {
-                        "type": "boolean",
-                        "description": "Show content in UI window",
-                        "default": False
-                    }
+
                 },
                 "required": ["file_path"]
             }
         ),
         Tool(
             name="write_file",
-            description="Write content to file with optional UI confirmation",
+            description="Write content to file",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -258,18 +267,14 @@ async def handle_list_tools() -> List[Tool]:
                         "description": "Create parent directories if needed",
                         "default": True
                     },
-                    "confirm_ui": {
-                        "type": "boolean",
-                        "description": "Show confirmation dialog in UI",
-                        "default": True
-                    }
+
                 },
                 "required": ["file_path", "content"]
             }
         ),
         Tool(
             name="list_directory",
-            description="List directory contents and display in UI",
+            description="List directory contents",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -282,18 +287,13 @@ async def handle_list_tools() -> List[Tool]:
                         "description": "List recursively",
                         "default": False
                     },
-                    "show_ui": {
-                        "type": "boolean",
-                        "description": "Show directory listing in UI window",
-                        "default": True
-                    }
+
                 },
                 "required": ["dir_path"]
             }
         ),
+    ])
 
-    ]
-    
     return tools
 
 
@@ -301,6 +301,12 @@ async def handle_list_tools() -> List[Tool]:
 async def handle_call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
     """Handle tool calls."""
     try:
+        # Database tools - check availability first
+        if name in ["sql_query", "sql_execute", "get_table_schema", "list_tables"]:
+            if not db_manager.is_available():
+                error_msg = f"❌ 数据库工具不可用: {db_manager.get_connection_error()}"
+                return [TextContent(type="text", text=error_msg)]
+
         if name == "sql_query":
             return await handle_sql_query(arguments)
         elif name == "sql_execute":
@@ -309,6 +315,10 @@ async def handle_call_tool(name: str, arguments: Dict[str, Any]) -> List[TextCon
             return await handle_get_table_schema(arguments)
         elif name == "list_tables":
             return await handle_list_tables(arguments)
+        elif name == "database_reconnect":
+            return await handle_database_reconnect(arguments)
+        elif name == "database_status":
+            return await handle_database_status(arguments)
         elif name == "read_file":
             return await handle_read_file(arguments)
         elif name == "write_file":
@@ -318,7 +328,7 @@ async def handle_call_tool(name: str, arguments: Dict[str, Any]) -> List[TextCon
 
         else:
             raise ValueError(f"Unknown tool: {name}")
-    
+
     except Exception as e:
         logger.error(f"Tool {name} failed: {e}")
         return [TextContent(type="text", text=f"Error: {str(e)}")]
@@ -329,11 +339,6 @@ async def handle_sql_query(arguments: Dict[str, Any]) -> List[TextContent]:
     """Handle SQL query execution."""
     query = arguments.get("query", "")
     parameters = arguments.get("parameters", {})
-    show_ui = arguments.get("show_ui", True)
-
-    # 首先检查数据库连接
-    if not db_manager.test_connection():
-        return [TextContent(type="text", text="❌ 数据库连接失败，请检查连接配置")]
 
     try:
         result_data = db_manager.execute_query(query, parameters)
@@ -366,10 +371,6 @@ async def handle_sql_query(arguments: Dict[str, Any]) -> List[TextContent]:
 
                 if row_count > 100:
                     response_text += f"\n... and {row_count - 100} more rows"
-
-        # Note: UI functionality has been removed for simplicity
-        if show_ui:
-            logger.debug("UI display requested but UI functionality has been removed")
 
         return [TextContent(type="text", text=response_text)]
 
@@ -427,7 +428,6 @@ async def handle_get_table_schema(arguments: Dict[str, Any]) -> List[TextContent
     """Handle table schema retrieval."""
     table_name = arguments.get("table_name", "")
     schema_name = arguments.get("schema_name", "dbo")
-    show_ui = arguments.get("show_ui", True)
 
     try:
         schema_data = db_manager.get_table_schema(table_name, schema_name)
@@ -458,10 +458,6 @@ async def handle_get_table_schema(arguments: Dict[str, Any]) -> List[TextContent
 
                 response_text += f"{column_name} | {data_type} | {nullable} | {default} | {key_type} | {description}\n"
 
-        # Note: UI functionality has been removed for simplicity
-        if show_ui:
-            logger.debug("UI display requested but UI functionality has been removed")
-
         return [TextContent(type="text", text=response_text)]
 
     except Exception as e:
@@ -473,7 +469,6 @@ async def handle_get_table_schema(arguments: Dict[str, Any]) -> List[TextContent
 async def handle_list_tables(arguments: Dict[str, Any]) -> List[TextContent]:
     """Handle database tables listing."""
     schema_name = arguments.get("schema_name", "dbo")
-    show_ui = arguments.get("show_ui", True)
 
     try:
         tables = db_manager.get_database_tables(schema_name)
@@ -485,14 +480,6 @@ async def handle_list_tables(arguments: Dict[str, Any]) -> List[TextContent]:
             for i, table in enumerate(tables, 1):
                 response_text += f"{i}. {table}\n"
 
-        # Show in UI if requested
-        if show_ui:
-            try:
-                await show_tables_list_in_ui(schema_name, tables)
-            except Exception as ui_error:
-                logger.warning(f"Failed to show tables in UI: {ui_error}")
-                response_text += f"\n\nNote: Could not display in UI window: {ui_error}"
-
         return [TextContent(type="text", text=response_text)]
 
     except Exception as e:
@@ -501,11 +488,94 @@ async def handle_list_tables(arguments: Dict[str, Any]) -> List[TextContent]:
         return [TextContent(type="text", text=error_msg)]
 
 
+async def handle_database_reconnect(arguments: Dict[str, Any]) -> List[TextContent]:
+    """Handle database reconnection attempt."""
+    try:
+        logger.info("Attempting to reconnect to database...")
+        success = db_manager.reconnect()
+
+        if success:
+            return [TextContent(type="text", text="✅ 数据库重连成功！数据库工具现在可用。")]
+        else:
+            error_msg = db_manager.get_connection_error() or "未知错误"
+            return [TextContent(type="text", text=f"❌ 数据库重连失败: {error_msg}")]
+
+    except Exception as e:
+        error_msg = f"数据库重连过程中发生错误: {str(e)}"
+        logger.error(error_msg)
+        return [TextContent(type="text", text=error_msg)]
+
+
+async def handle_database_status(arguments: Dict[str, Any]) -> List[TextContent]:
+    """Handle database status check."""
+    try:
+        is_available = db_manager.is_available()
+
+        if is_available:
+            # Test actual connection
+            connection_ok = db_manager.test_connection()
+            if connection_ok:
+                status_text = "✅ 数据库连接正常，所有数据库工具可用。"
+            else:
+                status_text = "⚠️ 数据库标记为可用，但连接测试失败。尝试重连可能有帮助。"
+        else:
+            error_msg = db_manager.get_connection_error() or "未知错误"
+            status_text = f"❌ 数据库不可用: {error_msg}\n💡 提示：使用 database_reconnect 工具尝试重新连接"
+
+        return [TextContent(type="text", text=status_text)]
+
+    except Exception as e:
+        error_msg = f"检查数据库状态时发生错误: {str(e)}"
+        logger.error(error_msg)
+        return [TextContent(type="text", text=error_msg)]
+
+
+async def handle_database_reconnect(arguments: Dict[str, Any]) -> List[TextContent]:
+    """Handle database reconnection attempt."""
+    try:
+        logger.info("Attempting to reconnect to database...")
+        success = db_manager.reconnect()
+
+        if success:
+            return [TextContent(type="text", text="✅ 数据库重连成功！数据库工具现在可用。")]
+        else:
+            error_msg = db_manager.get_connection_error() or "未知错误"
+            return [TextContent(type="text", text=f"❌ 数据库重连失败: {error_msg}")]
+
+    except Exception as e:
+        error_msg = f"数据库重连过程中发生错误: {str(e)}"
+        logger.error(error_msg)
+        return [TextContent(type="text", text=error_msg)]
+
+
+async def handle_database_status(arguments: Dict[str, Any]) -> List[TextContent]:
+    """Handle database status check."""
+    try:
+        is_available = db_manager.is_available()
+
+        if is_available:
+            # Test actual connection
+            connection_ok = db_manager.test_connection()
+            if connection_ok:
+                status_text = "✅ 数据库连接正常，所有数据库工具可用。"
+            else:
+                status_text = "⚠️ 数据库标记为可用，但连接测试失败。尝试重连可能有帮助。"
+        else:
+            error_msg = db_manager.get_connection_error() or "未知错误"
+            status_text = f"❌ 数据库不可用: {error_msg}\n💡 提示：使用 database_reconnect 工具尝试重新连接"
+
+        return [TextContent(type="text", text=status_text)]
+
+    except Exception as e:
+        error_msg = f"检查数据库状态时发生错误: {str(e)}"
+        logger.error(error_msg)
+        return [TextContent(type="text", text=error_msg)]
+
+
 async def handle_read_file(arguments: Dict[str, Any]) -> List[TextContent]:
     """Handle file reading."""
     file_path = arguments.get("file_path", "")
     encoding = arguments.get("encoding", "utf-8")
-    show_ui = arguments.get("show_ui", False)
 
     try:
         content = fs_manager.read_file(file_path, encoding)
@@ -516,14 +586,6 @@ async def handle_read_file(arguments: Dict[str, Any]) -> List[TextContent]:
             response_text = f"File content from '{file_path}':\n\n{preview_content}"
         else:
             response_text = f"File content from '{file_path}':\n\n{content}"
-
-        # Show in UI if requested
-        if show_ui:
-            try:
-                await show_file_content_in_ui(file_path, content)
-            except Exception as ui_error:
-                logger.warning(f"Failed to show file content in UI: {ui_error}")
-                response_text += f"\n\nNote: Could not display in UI window: {ui_error}"
 
         return [TextContent(type="text", text=response_text)]
 
@@ -552,16 +614,6 @@ async def handle_write_file(arguments: Dict[str, Any]) -> List[TextContent]:
                 text=f"File '{file_path}' already exists. Please add 'confirm': true to overwrite."
             )]
 
-        # Show confirmation dialog in UI if available
-        if not confirm:
-            try:
-                confirmed = await show_file_write_confirmation_ui(file_path, len(content))
-                if not confirmed:
-                    return [TextContent(type="text", text="File write operation cancelled by user.")]
-            except Exception as ui_error:
-                logger.warning(f"Failed to show confirmation dialog: {ui_error}")
-                # Continue without UI confirmation
-
         fs_manager.write_file(file_path, content, encoding, create_dirs)
 
         response_text = f"File written successfully: '{file_path}' ({len(content)} characters)"
@@ -578,7 +630,6 @@ async def handle_list_directory(arguments: Dict[str, Any]) -> List[TextContent]:
     """Handle directory listing."""
     dir_path = arguments.get("dir_path", "")
     recursive = arguments.get("recursive", False)
-    show_ui = arguments.get("show_ui", True)
 
     try:
         items = fs_manager.list_directory(dir_path, recursive)
@@ -598,10 +649,6 @@ async def handle_list_directory(arguments: Dict[str, Any]) -> List[TextContent]:
 
                 response_text += f"{item_type} | {name} | {size} | {modified}\n"
 
-        # Note: UI functionality has been removed for simplicity
-        if show_ui:
-            logger.debug("UI display requested but UI functionality has been removed")
-
         return [TextContent(type="text", text=response_text)]
 
     except Exception as e:
@@ -610,14 +657,9 @@ async def handle_list_directory(arguments: Dict[str, Any]) -> List[TextContent]:
         return [TextContent(type="text", text=error_msg)]
 
 
-# UI functionality has been removed for simplicity and reliability
-
-
 async def main():
     """Main entry point for the MCP server."""
     logger.info("Starting MCP SQL Server Filesystem server...")
-
-    # UI functionality has been removed for simplicity
 
     # Test database connection on startup (non-blocking)
     try:
@@ -642,9 +684,6 @@ async def main():
                 )
             )
         )
-
-
-# UI functionality has been removed
 
 
 if __name__ == "__main__":

@@ -26,10 +26,12 @@ class DatabaseConnectionError(Exception):
 
 class SQLServerManager:
     """Manages SQL Server connections and operations."""
-    
+
     def __init__(self):
         self._engine: Optional[Engine] = None
         self._metadata: Optional[MetaData] = None
+        self._is_available: bool = False
+        self._connection_error: Optional[str] = None
         self._initialize_engine()
     
     def _initialize_engine(self) -> None:
@@ -38,7 +40,7 @@ class SQLServerManager:
             # Convert pyodbc connection string to SQLAlchemy format
             connection_string = config.database.connection_string
             sqlalchemy_url = f"mssql+pyodbc:///?odbc_connect={connection_string}"
-            
+
             self._engine = create_engine(
                 sqlalchemy_url,
                 poolclass=QueuePool,
@@ -48,14 +50,39 @@ class SQLServerManager:
                 pool_recycle=3600,   # Recycle connections every hour
                 echo=config.server.debug,  # Log SQL queries in debug mode
             )
-            
+
             self._metadata = MetaData()
-            logger.info("Database engine initialized successfully")
-            
+
+            # Test the connection to ensure it's working
+            if self.test_connection():
+                self._is_available = True
+                self._connection_error = None
+                logger.info("Database engine initialized and connection test successful")
+            else:
+                self._is_available = False
+                self._connection_error = "Connection test failed"
+                logger.warning("Database engine initialized but connection test failed")
+
         except Exception as e:
-            logger.error(f"Failed to initialize database engine: {e}")
-            raise DatabaseConnectionError(f"Database initialization failed: {e}")
-    
+            self._is_available = False
+            self._connection_error = str(e)
+            logger.warning(f"Failed to initialize database engine: {e} - Database features will be unavailable")
+            # Don't raise exception, just mark as unavailable
+
+    def is_available(self) -> bool:
+        """Check if database is available for operations."""
+        return self._is_available
+
+    def get_connection_error(self) -> Optional[str]:
+        """Get the last connection error message."""
+        return self._connection_error
+
+    def reconnect(self) -> bool:
+        """Attempt to reconnect to the database."""
+        logger.info("Attempting to reconnect to database...")
+        self._initialize_engine()
+        return self._is_available
+
     def _validate_sql_query(self, query: str) -> None:
         """Validate SQL query for security issues."""
         # Skip all validation if SQL protection is disabled (full access mode)
@@ -102,15 +129,21 @@ class SQLServerManager:
     @contextmanager
     def get_connection(self):
         """Get a database connection with automatic cleanup."""
+        if not self._is_available:
+            raise DatabaseConnectionError(f"Database is not available: {self._connection_error}")
+
         if not self._engine:
             raise DatabaseConnectionError("Database engine not initialized")
-        
+
         connection = None
         try:
             connection = self._engine.connect()
             yield connection
         except Exception as e:
             logger.error(f"Database connection error: {e}")
+            # Mark as unavailable if connection fails
+            self._is_available = False
+            self._connection_error = str(e)
             if connection:
                 connection.rollback()
             raise
@@ -120,14 +153,17 @@ class SQLServerManager:
     
     def execute_query(self, query: str, parameters: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Execute a SELECT query and return results."""
+        if not self._is_available:
+            raise DatabaseConnectionError(f"Database is not available: {self._connection_error}")
+
         self._validate_sql_query(query)
-        
+
         if config.security.enable_query_logging:
             if config.security.log_sensitive_data:
                 logger.info(f"Executing query: {query} with parameters: {parameters}")
             else:
                 logger.info(f"Executing query: {query}")
-        
+
         try:
             with self.get_connection() as conn:
                 result = conn.execute(text(query), parameters or {})
@@ -161,14 +197,17 @@ class SQLServerManager:
     
     def execute_non_query(self, query: str, parameters: Optional[Dict[str, Any]] = None) -> int:
         """Execute an INSERT, UPDATE, or DELETE query and return affected rows count."""
+        if not self._is_available:
+            raise DatabaseConnectionError(f"Database is not available: {self._connection_error}")
+
         self._validate_sql_query(query)
-        
+
         if config.security.enable_query_logging:
             if config.security.log_sensitive_data:
                 logger.info(f"Executing non-query: {query} with parameters: {parameters}")
             else:
                 logger.info(f"Executing non-query: {query}")
-        
+
         try:
             with self.get_connection() as conn:
                 result = conn.execute(text(query), parameters or {})
@@ -184,6 +223,8 @@ class SQLServerManager:
     
     def get_table_schema(self, table_name: str, schema_name: str = "dbo") -> Dict[str, Any]:
         """Get table schema information."""
+        if not self._is_available:
+            raise DatabaseConnectionError(f"Database is not available: {self._connection_error}")
         query = """
         SELECT
             c.COLUMN_NAME,
@@ -231,30 +272,40 @@ class SQLServerManager:
     
     def get_database_tables(self, schema_name: str = "dbo") -> List[str]:
         """Get list of tables in the database."""
+        if not self._is_available:
+            raise DatabaseConnectionError(f"Database is not available: {self._connection_error}")
+
         query = """
-        SELECT TABLE_NAME 
-        FROM INFORMATION_SCHEMA.TABLES 
+        SELECT TABLE_NAME
+        FROM INFORMATION_SCHEMA.TABLES
         WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_SCHEMA = :schema_name
         ORDER BY TABLE_NAME
         """
-        
+
         try:
             result = self.execute_query(query, {'schema_name': schema_name})
             return [row['TABLE_NAME'] for row in result['rows']]
-            
+
         except Exception as e:
             logger.error(f"Failed to get database tables: {e}")
             raise
     
     def test_connection(self) -> bool:
         """Test database connection."""
+        if not self._engine:
+            return False
+
         try:
-            with self.get_connection() as conn:
-                conn.execute(text("SELECT 1"))
-            logger.info("Database connection test successful")
-            return True
+            # Use direct engine connection for testing to avoid circular dependency
+            connection = self._engine.connect()
+            try:
+                connection.execute(text("SELECT 1"))
+                logger.debug("Database connection test successful")
+                return True
+            finally:
+                connection.close()
         except Exception as e:
-            logger.error(f"Database connection test failed: {e}")
+            logger.debug(f"Database connection test failed: {e}")
             return False
     
     def list_tables(self, schema_name: str = "dbo") -> List[str]:
@@ -263,6 +314,14 @@ class SQLServerManager:
     
     def execute_with_details(self, query: str, parameters: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Execute query and return detailed results including affected records for INSERT/UPDATE/DELETE."""
+        if not self._is_available:
+            return {
+                'type': 'error',
+                'success': False,
+                'error': f'Database is not available: {self._connection_error}',
+                'message': f'数据库连接不可用: {self._connection_error}'
+            }
+
         self._validate_sql_query(query)
         
         query_upper = query.strip().upper()
